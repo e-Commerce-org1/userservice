@@ -11,44 +11,22 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
-import { User, UserDocument } from './schemas/user.schema';
-import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
-import { CreateAddressDto } from './dto/create-address.dto';
-import { UpdateAddressDto } from './dto/update-address.dto';
-import { RESPONSE_MESSAGES } from './common/user-messages';
-import { ResponseHelper, ApiResponse } from './common/response.helper';
-import { logger } from './common/logger';
-import { EmailService } from '../user/provider/email/email.service';
-import { RedisService } from '../user/provider/redis/redis.service';
+import { User, UserDocument } from '../schemas/user.schema';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { LoginUserDto } from '../dto/login-user.dto';
+import { CreateAddressDto } from '../dto/create-address.dto';
+import { UpdateAddressDto } from '../dto/update-address.dto';
+import { RESPONSE_MESSAGES } from '../common/user-messages';
+import { ResponseHelper, ApiResponse } from '../common/response.helper';
+import { logger } from '../common/logger';
+import { EmailService } from '../provider/email/email.service';
+import { RedisService } from '../provider/redis/redis.service';
 import { ClientGrpc } from '@nestjs/microservices';
 import { Observable, lastValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
-import { generateOTP } from './utils/generateOtp';
-import { generateResetToken } from './utils/gen-reset-token';
-import { Types } from 'mongoose';
-//import { AuthGuard } from './auth.guard';
-//import { ChangePasswordDto } from './dto/change-password.dto';
-
-// Interface updated to match the proto file
-interface AuthServiceGrpc {
-  getToken(data: { email: string; deviceId: string; role: string; userId: string }): Observable<{
-    accessToken: string;
-    refreshToken: string;
-  }>;
-  refreshToken(data: { userId: string; deviceId: string; refreshToken: string }): Observable<{
-    accessToken: string;
-  }>;
-  logout(data: { userId: string; deviceId: string }): Observable<{ success: boolean }>;
-  validateToken(data: { accessToken: string }): Observable<{
-    isValid: boolean;
-    message?: string;
-    userId: string;
-    email?: string;
-    deviceId?: string;
-    role?: string;
-  }>;
-}
+import { generateOTP } from '../utils/generateOtp';
+import { generateResetToken } from '../utils/gen-reset-token';
+import { AuthServiceGrpc } from '../interface/user.interface';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -145,7 +123,7 @@ export class UserService implements OnModuleInit {
           userId: user._id.toString(),
         }),
       );
-      await this.userModel.findByIdAndUpdate(user._id, { deviceId: deviceId });
+      await this.userModel.findByIdAndUpdate(user._id,{isActive:true}, { deviceId: deviceId });
       logger.info(`User logged in: ${dto.email}`);
       return ResponseHelper.success(RESPONSE_MESSAGES.LOGIN_SUCCESS, {
         user: {
@@ -223,15 +201,13 @@ export class UserService implements OnModuleInit {
   }
 
   async refreshTokens(
-    userId: string,
-    deviceId: string,
-    refreshToken: string,
+// userId: string,
+// deviceId: string,
+refreshToken: string,
   ): Promise<ApiResponse<{ accessToken: string }>> {
     try {
       const response = await lastValueFrom(
         this.authService.refreshToken({
-          userId,
-          deviceId,
           refreshToken,
         }),
       );
@@ -255,6 +231,7 @@ export class UserService implements OnModuleInit {
   }> {
     try {
       const response = await lastValueFrom(this.authService.validateToken({ accessToken: token }));
+      console.log(response);
       return response;
     } catch (error) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -265,16 +242,11 @@ export class UserService implements OnModuleInit {
 
   async changePassword(
     userId: string,
-    token: string,
+    // token: string,
     // // currentPassword: string,
     newPassword: string,
     //changePasswordDto: ChangePasswordDto,
   ): Promise<ApiResponse> {
-    console.log(token);
-    const validation = await this.validateAccessToken(token);
-    if (!validation.isValid || !validation.userId) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
     const user = await this.userModel.findById(userId);
     if (!user) {
       logger.warn(`Password change failed: User not found - ${userId}`);
@@ -482,26 +454,27 @@ async deleteAddress(userId: string, addressId: string): Promise<ApiResponse<null
     return ResponseHelper.success(RESPONSE_MESSAGES.PROFILE_RETRIEVED_SUCCESS, user);
   }
 
-  async logout(userId: string, deviceId?: string): Promise<ApiResponse<{ deviceId: string }>> {
-    try {
-      const usedDeviceId = deviceId || uuidv4();
-      const result = await lastValueFrom(
-        this.authService.logout({
-          userId,
-          deviceId: usedDeviceId,
-        }),
-      );
-      if (!result.success) {
-        throw new Error('Logout failed');
-      }
-      logger.info(`User logged out successfully from device: ${usedDeviceId}`);
-      return ResponseHelper.success(RESPONSE_MESSAGES.LOGOUT_SUCCESS, {
-        deviceId: usedDeviceId,
-      });
-    } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      logger.error(`Logout error: ${error.message}, userId: ${userId}`);
-      throw new InternalServerErrorException(RESPONSE_MESSAGES.LOGOUT_FAILED);
+  async logout(accessToken: string): Promise<ApiResponse<{ success: boolean }>> {
+  try {
+    const result = await lastValueFrom(
+      this.authService.logout({
+        accessToken,
+      }),
+    );
+    
+    if (!result.success) {
+      throw new Error('Logout failed');
     }
+    
+    logger.info(`User logged out successfully with token: ${accessToken.substring(0, 10)}...`);
+    return ResponseHelper.success(RESPONSE_MESSAGES.LOGOUT_SUCCESS, {
+      success: result.success,
+    });
+  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    logger.error(`Logout error: ${error.message}, token: ${accessToken.substring(0, 10)}...`);
+    throw new InternalServerErrorException(RESPONSE_MESSAGES.LOGOUT_FAILED);
   }
+}
+
 }

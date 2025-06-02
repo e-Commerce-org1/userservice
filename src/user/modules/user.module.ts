@@ -4,13 +4,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 
-import { UserService } from './user.service';
-import { UserController } from './user.controller';
-import { User, UserSchema } from './schemas/user.schema';
+import { UserService } from '../services/user.service';
+import { UserController } from '../controllers/user.controller';
+import { User, UserSchema } from '../schemas/user.schema';
 //import { Address, AddressSchema } from './schemas/address.schema';
-import { EmailModule } from './provider/email/email.module';
-import { RedisModule } from './provider/redis/redis.module';
-import { AuthGuard } from './middleware/auth.guard';
+import { EmailModule } from '../provider/email/email.module';
+import { RedisModule } from '../provider/redis/redis.module';
+import { AuthGuard } from '../middleware/auth.guard';
+import { UserAdminController } from '../controllers/admin-user.controller';
+import { UserAdminService } from '../services/admin-user.service';
 
 @Module({
   imports: [
@@ -26,7 +28,23 @@ import { AuthGuard } from './middleware/auth.guard';
           options: {
             package: 'auth',
             protoPath: join(__dirname, '../proto/auth.proto'),
-            url: configService.get<string>('AUTH_SERVICE_URL') || '172.50.3.60:5051',
+            url: configService.get<string>('AUTH_SERVICE_URL') || '0.0.0.0:5051',
+          },
+        }),
+        inject: [ConfigService],
+      },
+    ]),
+
+       ClientsModule.registerAsync([
+      {
+        name: 'USER_ADMIN_SERVICE',
+        imports: [ConfigModule],
+        useFactory: async () => ({
+          transport: Transport.GRPC,
+          options: {
+            package: 'useradmin',
+            protoPath: join(__dirname, '../proto/admin.proto'),
+            url: '0.0.0.0:50051', // Exposing gRPC server from this module
           },
         }),
         inject: [ConfigService],
@@ -50,7 +68,7 @@ import { AuthGuard } from './middleware/auth.guard';
     EmailModule,
     RedisModule,
   ],
-  controllers: [UserController],
-  providers: [UserService, AuthGuard],
+  controllers: [UserController,UserAdminController],
+  providers: [UserService,UserAdminService, AuthGuard],
 })
 export class UserModule {}

@@ -21,6 +21,9 @@ export class User {
   @Prop({ default: false })
   isVerified: boolean;
 
+  @Prop({ default: false })
+  isActive: boolean;
+
   @Prop({ type: String })
   phoneNumber: string;
 

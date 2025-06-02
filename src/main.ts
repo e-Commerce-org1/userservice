@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { UserModule } from './user/user.module';
+import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { logger } from './user/common/logger';
@@ -8,7 +8,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(UserModule, {
+  const app = await NestFactory.create(AppModule, {
     logger: logger, // Attach Winston Logger
   });
 
@@ -41,7 +41,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document); // http://localhost:3000/api-docs
 
-  const PORT = process.env.PORT || 3001;
+  const PORT = process.env.PORT || 8080;
   await app.listen(PORT);
   Logger.log(`🚀 Server is running on http://localhost:${PORT}`, 'Bootstrap');
 }

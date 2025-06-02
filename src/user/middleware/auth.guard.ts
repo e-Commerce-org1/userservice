@@ -1,7 +1,7 @@
 // auth.guard.ts
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import { UserService } from '../user.service';
+import { UserService } from '../services/user.service';
 import { logger } from '../common/logger';
 import { IncomingHttpHeaders } from 'http';
 
@@ -21,31 +21,6 @@ interface AuthenticatedRequest extends Request {
 export class AuthGuard implements CanActivate {
   constructor(private userService: UserService) {}
 
-//   async canActivate(context: ExecutionContext): Promise<boolean> {
-//     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-//     const token = this.extractTokenFromHeader(request);
-//     if (!token) {
-//       throw new UnauthorizedException('Missing access token');
-//     }
-//     try {
-//       const validation = await this.userService.validateAccessToken(token);
-//       if (!validation.isValid) {
-//         throw new UnauthorizedException(validation.message || 'Invalid token');
-//       }
-//       request.user = {
-//         userId: validation.userId,
-//         email: validation.email,
-//         deviceId: validation.deviceId,
-//         role: validation.role,
-//       };
-//       return true;
-//     } catch (error) {
-//       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-//       logger.error(`Auth guard error: ${error.message}`);
-//       throw new UnauthorizedException('Invalid token');
-//     }
-//   }
-// auth.guard.ts
 async canActivate(context: ExecutionContext): Promise<boolean> {
   const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
   const token = this.extractTokenFromHeader(request); // or this.extractTokenFromHeader
@@ -54,8 +29,9 @@ async canActivate(context: ExecutionContext): Promise<boolean> {
     throw new UnauthorizedException('Missing access token');
   }
   try {
-    console.log(token);
+    // console.log(token);
     const validation = await this.userService.validateAccessToken(token);
+   console.log(validation);
     logger.debug(`Token validation result: ${JSON.stringify(validation)}`);
     if (!validation.isValid) {
       throw new UnauthorizedException(validation.message || 'Invalid token');

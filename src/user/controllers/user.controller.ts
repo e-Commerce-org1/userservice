@@ -14,23 +14,23 @@ import {
   Inject,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
-import { CreateAddressDto } from './dto/create-address.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
-import { PasswordResetInitDto } from './dto/ password-reset-init.dto';
-import { VerifyOtpDto } from './dto/verify-otp.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
+import { UserService } from '../services/user.service';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { LoginUserDto } from '../dto/login-user.dto';
+import { CreateAddressDto } from '../dto/create-address.dto';
+import { VerifyEmailDto } from '../dto/verify-email.dto';
+import { PasswordResetInitDto } from '../dto/ password-reset-init.dto';
+import { VerifyOtpDto } from '../dto/verify-otp.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 //import { AuthGuard } from './auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { LoginResponseDto } from './dto/login-response.dto';
-import { UpdateAddressDto } from './dto/update-address.dto';
-import { HTTP_STATUS } from './common/http-status';
-import { RESPONSE_MESSAGES } from './common/user-messages';
-import { GoogleOAuthGuard } from './middleware/google-oauth.guard';
-import { AuthGuard } from './middleware/auth.guard';
+import { LoginResponseDto } from '../dto/login-response.dto';
+import { UpdateAddressDto } from '../dto/update-address.dto';
+import { HTTP_STATUS } from '../common/http-status';
+import { RESPONSE_MESSAGES } from '../common/user-messages';
+import { GoogleOAuthGuard } from '../middleware/google-oauth.guard';
+import { AuthGuard } from '../middleware/auth.guard';
 
 @ApiTags('Users')
 @Controller('users')
@@ -177,12 +177,8 @@ export class UserController {
   })
   async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    const token = this.authGuard.extractTokenFromHeader(req);
-    if (!token) {
-      throw new UnauthorizedException('Missing access token');
-    }
     return await this.userService.changePassword(
-     token,
+    //  token,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
       req.user.userId,
       // changePasswordDto.currentPassword,
@@ -206,9 +202,9 @@ export class UserController {
   async refreshToken(@Request() req, @Body() body: { refreshToken: string }) {
     return await this.userService.refreshTokens(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      req.user.userId,
+    //  req.user.userId,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      req.user.deviceId,
+//      req.user.deviceId,
       body.refreshToken,
     );
   }
@@ -296,17 +292,24 @@ export class UserController {
     return await this.userService.getProfile(req.user.userId);
   }
 
-  @UseGuards(AuthGuard)
-  @Post('logout')
-  @HttpCode(HTTP_STATUS.OK)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'User logout (authenticated)' })
-  @ApiResponse({
-    status: HTTP_STATUS.OK,
-    description: RESPONSE_MESSAGES.LOGOUT_SUCCESS,
-  })
-  async logout(@Request() req) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-    return await this.userService.logout(req.user.userId, req.user.deviceId);
+@UseGuards(AuthGuard)
+@Post('logout')
+@HttpCode(HTTP_STATUS.OK)
+@ApiBearerAuth()
+@ApiOperation({ summary: 'User logout (authenticated)' })
+@ApiResponse({
+  status: HTTP_STATUS.OK,
+  description: RESPONSE_MESSAGES.LOGOUT_SUCCESS,
+})
+async logout(@Request() req) {
+  // Extract access token from Authorization header
+  const authHeader = req.headers.authorization;
+  const accessToken = authHeader?.replace('Bearer ', '');
+  
+  if (!accessToken) {
+    throw new UnauthorizedException('Access token is required');
   }
+  
+  return await this.userService.logout(accessToken);
+}
 }
