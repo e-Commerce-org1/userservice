@@ -4,27 +4,30 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { logger } from './user/common/logger';
 import * as dotenv from 'dotenv';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { join } from 'path';
 
 dotenv.config();
 
 async function bootstrap() {
+  // Create HTTP server
   const app = await NestFactory.create(AppModule, {
     logger: logger, // Attach Winston Logger
   });
 
-  // Enable CORS
+  // Enable CORS (for HTTP)
   app.enableCors();
 
-  // Global validation
+  // Global validation (for HTTP)
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // strips unvalidated properties
+      whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
     }),
   );
 
-  // Swagger setup
+  // Swagger setup (for HTTP)
   const config = new DocumentBuilder()
     .setTitle('User API')
     .setDescription('User service APIs with address & auth')
@@ -33,16 +36,47 @@ async function bootstrap() {
       {
         type: 'http',
         scheme: 'bearer',
-        bearerFormat: 'JWT', // Optional: specifies the token format
+        bearerFormat: 'JWT',
       },
-      'JWT-auth', // Name of the security scheme (used in @ApiBearerAuth decorator)
+      'JWT-auth',
     )
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document); // http://localhost:3000/api-docs
+  SwaggerModule.setup('api-docs', app, document);
 
-  const PORT = process.env.PORT || 8080;
-  await app.listen(PORT);
-  Logger.log(`🚀 Server is running on http://localhost:${PORT}`, 'Bootstrap');
+  // Create gRPC microservice
+  const grpcMicroservice = await NestFactory.createMicroservice<MicroserviceOptions>(
+    AppModule,
+    {
+      transport: Transport.GRPC,
+      options: {
+        package: 'useradmin', // Must match your proto package
+        protoPath: join(__dirname, 'proto/admin.proto'), // Path to proto file
+        url: process.env.GRPC_URL || '0.0.0.0:5051', // gRPC server address
+        loader: {
+          keepCase: true,
+          longs: String,
+          enums: String,
+          defaults: true,
+          oneofs: true,
+        },
+      },
+    },
+  );
+
+  // Start both servers
+  const HTTP_PORT = process.env.PORT || 3001;
+  await Promise.all([
+    app.listen(HTTP_PORT),
+    grpcMicroservice.listen(),
+  ]);
+
+  Logger.log(`🚀 HTTP Server running on http://localhost:${HTTP_PORT}`, 'Bootstrap');
+  Logger.log(`🔄 gRPC Server running on ${process.env.GRPC_URL || '0.0.0.0:50051'}`, 'Bootstrap');
+  Logger.log(`📄 Swagger docs available at http://localhost:${HTTP_PORT}/api-docs`, 'Bootstrap');
 }
-bootstrap();
+
+bootstrap().catch(err => {
+  Logger.error('Failed to start application', err.stack, 'Bootstrap');
+  process.exit(1);
+});

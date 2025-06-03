@@ -68,6 +68,6 @@ export interface UserData {
   phone: string;
   status: string;
   role: string;
-  // createdAt: string;
+  //  createdAt: string;
   // updatedAt: string;
 }

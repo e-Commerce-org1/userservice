@@ -13,7 +13,6 @@ service UserAdminGrpcService {
 message GetAllUsersRequest {
   int32 page = 1;
   int32 limit = 2;
-  string sortBy = 3;
 }
 
 message GetAllUsersResponse {
@@ -73,12 +72,10 @@ message SearchUsersResponse {
 message UserData {
   string id = 1;
   string email = 2;
-  string name:3;
+  string name=3;
   string phone = 4;
   string status = 5;
   string role = 6;
-  string createdAt = 7;
-  string updatedAt = 8;
 }
 
 message Address {

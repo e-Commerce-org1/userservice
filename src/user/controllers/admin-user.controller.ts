@@ -38,10 +38,10 @@ export class UserAdminController {
     return this.userAdminService.updateUserStatus(data);
   }
 
-  @GrpcMethod('UserAdminGrpcService', 'DeleteUser')
-  deleteUser(data: DeleteUserRequest): Promise<DeleteUserResponse> {
-    return this.userAdminService.deleteUser(data);
-  }
+  // @GrpcMethod('UserAdminGrpcService', 'DeleteUser')
+  // deleteUser(data: DeleteUserRequest): Promise<DeleteUserResponse> {
+  //   return this.userAdminService.deleteUser(data);
+  // }
 
   @GrpcMethod('UserAdminGrpcService', 'SearchUsers')
   searchUsers(data: SearchUsersRequest): Promise<SearchUsersResponse> {

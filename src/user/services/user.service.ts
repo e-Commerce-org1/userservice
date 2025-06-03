@@ -113,6 +113,10 @@ export class UserService implements OnModuleInit {
       logger.warn(`Login failed: User not verified - ${dto.email}`);
       throw new UnauthorizedException(RESPONSE_MESSAGES.EMAIL_NOT_VERIFIED);
     }
+    if(user.isActive=='block'){
+      logger.warn(`Login failed: User not verified - ${dto.email}`);
+      throw new UnauthorizedException(RESPONSE_MESSAGES.USER_BLOCKED);
+    }
     try {
       const deviceId = uuidv4();
       const tokens = await lastValueFrom(
@@ -123,7 +127,7 @@ export class UserService implements OnModuleInit {
           userId: user._id.toString(),
         }),
       );
-      await this.userModel.findByIdAndUpdate(user._id,{isActive:true}, { deviceId: deviceId });
+      await this.userModel.findByIdAndUpdate(user._id,{isActive:'active'}, { deviceId: deviceId });
       logger.info(`User logged in: ${dto.email}`);
       return ResponseHelper.success(RESPONSE_MESSAGES.LOGIN_SUCCESS, {
         user: {

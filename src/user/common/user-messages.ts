@@ -21,11 +21,17 @@ export const RESPONSE_MESSAGES = {
   ADDRESS_DELETED_SUCCESS: 'Address deleted successfully',
   ADDRESSES_RETRIEVED_SUCCESS: 'Addresses retrieved successfully',
 
+  //admin messages
+  USER_FETCHED : 'Users fetched successfully',
+  INDIVIDUAL_USER_FETCHED:'User fetched successfully',
+  STATUS_UPDATED:'User status updated',
+  DELETE_USER:'User deleted successfully',
   // Error Messages
   EMAIL_ALREADY_EXISTS: 'Email already exists',
   USER_NOT_FOUND: 'User not found',
   INVALID_CREDENTIALS: 'Invalid credentials',
   EMAIL_NOT_VERIFIED: 'Email not verified',
+  USER_BLOCKED:'User is blocked by admin',
   INVALID_VERIFICATION_TOKEN: 'Invalid verification token',
   USER_ALREADY_VERIFIED: 'User is already verified',
   INVALID_OTP: 'Invalid OTP',

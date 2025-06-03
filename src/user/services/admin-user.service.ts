@@ -17,6 +17,7 @@ import {
   UserData,
 } from '../interface/user-admin-grpc.interface';
 import { mapUserToUserData } from '../transformer/user.transformer';
+import { RESPONSE_MESSAGES } from '../common/user-messages';
 
 @Injectable()
 export class UserAdminService {
@@ -52,7 +53,7 @@ export class UserAdminService {
       limit,
       totalPages: Math.ceil(total / limit),
       success: true,
-      message: 'Users fetched successfully',
+      message: RESPONSE_MESSAGES.USER_FETCHED,
     };
 
     this.logger.log(`Fetched ${users.length} users`);
@@ -69,14 +70,14 @@ export class UserAdminService {
       return {
         user: undefined,
         success: false,
-        message: 'User not found',
+        message: RESPONSE_MESSAGES.USER_NOT_FOUND,
       };
     }
 
     return {
       user: mapUserToUserData(user),
       success: true,
-      message: 'User fetched successfully',
+      message: RESPONSE_MESSAGES.INDIVIDUAL_USER_FETCHED,
     };
   }
 
@@ -89,34 +90,35 @@ export class UserAdminService {
       return {
         user: undefined,
         success: false,
-        message: 'User not found',
+        message: RESPONSE_MESSAGES.USER_NOT_FOUND,
       };
     }
-    user.isActive = status === 'active';
+    user.isActive = status;
     await user.save();
 
     return {
       user: mapUserToUserData(user),
       success: true,
-      message: `User status updated to ${status}`,
+     // message: `User status updated to ${status}`,
+     message:RESPONSE_MESSAGES.STATUS_UPDATED,
     };
   }
 
-  async deleteUser(request: DeleteUserRequest): Promise<DeleteUserResponse> {
-    const user = await this.userModel.findByIdAndDelete(request.userId).exec();
+  // async deleteUser(request: DeleteUserRequest): Promise<DeleteUserResponse> {
+  //   const user = await this.userModel.findByIdAndDelete(request.userId).exec();
 
-    if (!user) {
-      return {
-        success: false,
-        message: 'User not found',
-      };
-    }
+  //   if (!user) {
+  //     return {
+  //       success: false,
+  //       message: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  //     };
+  //   }
 
-    return {
-      success: true,
-      message: 'User deleted successfully',
-    };
-  }
+  //   return {
+  //     success: true,
+  //     message: RESPONSE_MESSAGES.DELETE_USER,
+  //   };
+  // }
 
   async searchUsers(
     request: SearchUsersRequest,

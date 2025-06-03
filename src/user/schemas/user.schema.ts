@@ -21,8 +21,8 @@ export class User {
   @Prop({ default: false })
   isVerified: boolean;
 
-  @Prop({ default: false })
-  isActive: boolean;
+  @Prop({ type: String, enum: ['active', 'inactive', 'block','unblock'], default: 'inactive' })
+  isActive: string;
 
   @Prop({ type: String })
   phoneNumber: string;

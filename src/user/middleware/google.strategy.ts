@@ -1,35 +1,35 @@
-// import { PassportStrategy } from '@nestjs/passport';
-// import { Strategy, VerifyCallback } from 'passport-google-oauth20';
-// import { Injectable } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { Strategy, VerifyCallback } from 'passport-google-oauth20';
+import { Injectable } from '@nestjs/common';
 
-// @Injectable()
-// export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-//   constructor() {
-//     super({
-//       clientID: process.env.GOOGLE_CLIENT_ID,
-//       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//       callbackURL: 'http://localhost:3001/users/google/redirect',
-//       scope: ['email', 'profile'],
-//     });
-//   }
+@Injectable()
+export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+  constructor() {
+    super({
+  clientID: process.env.GOOGLE_CLIENT_ID as string,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+  callbackURL: 'http://localhost:3001/auth/google/redirect',
+  scope: ['email', 'profile'],
+  passReqToCallback: true,
+});
 
-//   async validate(
-//     accessToken: string,
-//     refreshToken: string,
-//     profile: any,
-//     done: VerifyCallback,
-//   ): Promise<any> {
-//     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-//     const { name, emails, photos } = profile;
-//     const user = {
-//       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-//       email: emails[0].value,
-//       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-//       name: name.givenName,
-//       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-//       picture: photos[0].value,
-//       accessToken,
-//     };
-//     done(null, user);
-//   }
-// }
+  }
+
+  async validate(
+    accessToken: string,
+    refreshToken: string,
+    profile: any,
+    done: VerifyCallback,
+  ): Promise<any> {
+    const { name, emails, photos } = profile;
+    const user = {
+      email: emails[0].value,
+      firstName: name.givenName,
+      lastName: name.familyName,
+      picture: photos[0].value,
+      accessToken,
+      refreshToken,
+    };
+    done(null, user);
+  }
+}

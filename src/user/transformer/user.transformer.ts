@@ -8,5 +8,7 @@ export const mapUserToUserData = (user: UserDocument): UserData => ({
   email: user.email,
   phone: user.phoneNumber || '',
   role: user.role,
-  status: user.isActive ? 'active' : 'inactive',
+  status: user.isActive,
+  // createdAt: user.createdAt,
+  // updatedAt:user.updatedAt,
 });

@@ -13,6 +13,7 @@ import { RedisModule } from '../provider/redis/redis.module';
 import { AuthGuard } from '../middleware/auth.guard';
 import { UserAdminController } from '../controllers/admin-user.controller';
 import { UserAdminService } from '../services/admin-user.service';
+import { GoogleStrategy } from '../middleware/google.strategy';
 
 @Module({
   imports: [
@@ -27,30 +28,14 @@ import { UserAdminService } from '../services/admin-user.service';
           transport: Transport.GRPC,
           options: {
             package: 'auth',
-            protoPath: join(__dirname, '../proto/auth.proto'),
+            protoPath: join(__dirname, '../../proto/auth.proto'),
             url: configService.get<string>('AUTH_SERVICE_URL') || '0.0.0.0:5051',
           },
         }),
         inject: [ConfigService],
       },
     ]),
-
-       ClientsModule.registerAsync([
-      {
-        name: 'USER_ADMIN_SERVICE',
-        imports: [ConfigModule],
-        useFactory: async () => ({
-          transport: Transport.GRPC,
-          options: {
-            package: 'useradmin',
-            protoPath: join(__dirname, '../proto/admin.proto'),
-            url: '0.0.0.0:50051', // Exposing gRPC server from this module
-          },
-        }),
-        inject: [ConfigService],
-      },
-    ]),
-
+    
     // Connect once using the shared DB
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -69,6 +54,6 @@ import { UserAdminService } from '../services/admin-user.service';
     RedisModule,
   ],
   controllers: [UserController,UserAdminController],
-  providers: [UserService,UserAdminService, AuthGuard],
+  providers: [UserService,UserAdminService, AuthGuard,GoogleStrategy],
 })
 export class UserModule {}
