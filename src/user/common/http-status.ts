@@ -1,4 +1,3 @@
-// src/common/constants/http-status.constants.ts
 export const HTTP_STATUS = {
   OK: 200,
   CREATED: 201,

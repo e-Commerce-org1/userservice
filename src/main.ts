@@ -6,19 +6,15 @@ import { logger } from './user/common/logger';
 import * as dotenv from 'dotenv';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import {packageName} from './user/common/constants/admin.constant'
 
 dotenv.config();
 
 async function bootstrap() {
-  // Create HTTP server
   const app = await NestFactory.create(AppModule, {
-    logger: logger, // Attach Winston Logger
+    logger: logger, 
   });
-
-  // Enable CORS (for HTTP)
   app.enableCors();
-
-  // Global validation (for HTTP)
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -26,8 +22,6 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
-  // Swagger setup (for HTTP)
   const config = new DocumentBuilder()
     .setTitle('User API')
     .setDescription('User service APIs with address & auth')
@@ -43,16 +37,14 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
-
-  // Create gRPC microservice
   const grpcMicroservice = await NestFactory.createMicroservice<MicroserviceOptions>(
     AppModule,
     {
       transport: Transport.GRPC,
       options: {
-        package: 'useradmin', // Must match your proto package
-        protoPath: join(__dirname, 'proto/admin.proto'), // Path to proto file
-        url: process.env.GRPC_URL || '0.0.0.0:5051', // gRPC server address
+        package: packageName, 
+        protoPath: join(__dirname, 'proto/admin.proto'), 
+        url: process.env.GRPC_URL || '0.0.0.0:5051',
         loader: {
           keepCase: true,
           longs: String,
@@ -64,7 +56,6 @@ async function bootstrap() {
     },
   );
 
-  // Start both servers
   const HTTP_PORT = process.env.PORT || 3001;
   await Promise.all([
     app.listen(HTTP_PORT),

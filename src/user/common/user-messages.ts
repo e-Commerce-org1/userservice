@@ -20,6 +20,7 @@ export const RESPONSE_MESSAGES = {
   ADDRESS_UPDATED_SUCCESS: 'Address updated successfully',
   ADDRESS_DELETED_SUCCESS: 'Address deleted successfully',
   ADDRESSES_RETRIEVED_SUCCESS: 'Addresses retrieved successfully',
+  ADDRESSES_RETRIEVAL_FAILED: 'Failed to retrieve addresses',
 
   //admin messages
   USER_FETCHED : 'Users fetched successfully',
@@ -40,4 +41,16 @@ export const RESPONSE_MESSAGES = {
   ADDRESS_NOT_FOUND: 'Address not found',
   SIGNUP_FAILED: 'Signup failed',
   LOGOUT_FAILED: 'Logout failed',
-} as const;
+  PASSWORD_RESET_FAILED: 'Password reset failed',
+  EMAIL_VERIFICATION_FAILED: 'Email verification failed',
+  PASSWORD_CHANGE_FAILED: 'Password change failed',
+  OTP_VERIFICATION_FAILED: 'OTP verification failed',
+  ADDRESS_CREATION_FAILED: 'Address creation failed',
+  PASSWORD_TOO_SHORT: 'Password must be at least 8 characters long',
+  ADDRESS_DELETED_FAILED:'address delete failed',
+  DATA_REQIRED:'User ID and token are required',
+  FILL_EMAIL : 'email is required',
+  ERROR_FETCHING_USERS: 'Error fetching users',
+  ERROR_FETCHING_USER: 'Error fetching user',
+  ERROR_UPDATING_STATUS: 'Error updating user status',
+};

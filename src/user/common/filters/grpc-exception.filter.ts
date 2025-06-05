@@ -1,4 +1,3 @@
-// src/common/filters/grpc-exception.filter.ts
 import {
   ArgumentsHost,
   Catch,

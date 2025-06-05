@@ -10,8 +10,6 @@ import {
   GetUserByIdResponse,
   UpdateUserStatusRequest,
   UpdateUserStatusResponse,
-  DeleteUserRequest,
-  DeleteUserResponse,
   SearchUsersRequest,
   SearchUsersResponse,
   UserData,
@@ -30,7 +28,8 @@ export class UserAdminService {
   async getAllUsers(
     request: GetAllUsersRequest,
   ): Promise<GetAllUsersResponse> {
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } =
+    try{
+      const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } =
       request;
     const skip = (page - 1) * limit;
 
@@ -59,12 +58,27 @@ export class UserAdminService {
     this.logger.log(`Fetched ${users.length} users`);
 
     return response;
+    }
+    catch (error) {
+      this.logger.error('Error fetching users', error);
+      return {
+        users: [],
+        total: 0,
+        page: request.page || 1,
+        limit: request.limit || 10,
+        totalPages: 0,
+        success: false,
+        message: RESPONSE_MESSAGES.ERROR_FETCHING_USERS,
+      };
+    }
+    
   }
 
   async getUserById(
     request: GetUserByIdRequest,
   ): Promise<GetUserByIdResponse> {
-    const user = await this.userModel.findById(request.userId).exec();
+    try{
+      const user = await this.userModel.findById(request.userId).exec();
 
     if (!user) {
       return {
@@ -79,12 +93,23 @@ export class UserAdminService {
       success: true,
       message: RESPONSE_MESSAGES.INDIVIDUAL_USER_FETCHED,
     };
+    }
+    catch (error) {
+      this.logger.error(`Error fetching user by ID ${request.userId}`, error);
+      return {
+        user: undefined,
+        success: false,
+        message: RESPONSE_MESSAGES.ERROR_FETCHING_USER,
+      };
+    }
+    
   }
 
   async updateUserStatus(
     request: UpdateUserStatusRequest,
   ): Promise<UpdateUserStatusResponse> {
-    const { userId, status } = request;
+    try{
+      const { userId, status } = request;
     const user = await this.userModel.findById(userId).exec();
     if (!user) {
       return {
@@ -99,31 +124,25 @@ export class UserAdminService {
     return {
       user: mapUserToUserData(user),
       success: true,
-     // message: `User status updated to ${status}`,
      message:RESPONSE_MESSAGES.STATUS_UPDATED,
     };
+    }
+    catch (error) {
+      this.logger.error(`Error updating user status for ID ${request.userId}`, error);
+      return {
+        user: undefined,
+        success: false,
+        message: RESPONSE_MESSAGES.ERROR_UPDATING_STATUS,
+      };
+    }
+    
   }
-
-  // async deleteUser(request: DeleteUserRequest): Promise<DeleteUserResponse> {
-  //   const user = await this.userModel.findByIdAndDelete(request.userId).exec();
-
-  //   if (!user) {
-  //     return {
-  //       success: false,
-  //       message: RESPONSE_MESSAGES.USER_NOT_FOUND,
-  //     };
-  //   }
-
-  //   return {
-  //     success: true,
-  //     message: RESPONSE_MESSAGES.DELETE_USER,
-  //   };
-  // }
 
   async searchUsers(
     request: SearchUsersRequest,
   ): Promise<SearchUsersResponse> {
-    const { query = '', searchBy = 'name', limit = 10 } = request;
+    try{
+      const { query = '', searchBy = 'name', limit = 10 } = request;
 
     const users = await this.userModel
       .find({ [searchBy]: { $regex: query, $options: 'i' } })
@@ -135,5 +154,14 @@ export class UserAdminService {
       total: users.length,
       success: true,
     };
+    }
+    catch (error) {
+      this.logger.error(`Error searching users with query "${request.query}"`, error);
+      return {
+        users: [],
+        total: 0,
+        success: false
+      };
+    }
   }
 }

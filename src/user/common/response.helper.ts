@@ -1,4 +1,3 @@
-// src/common/helpers/response.helper.ts
 import { HTTP_STATUS, HttpStatusCode } from './http-status';
 
 export interface ApiResponse<T = any> {
@@ -32,7 +31,6 @@ export class ResponseHelper {
       success: false,
       statusCode,
       message,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       error,
     };
   }

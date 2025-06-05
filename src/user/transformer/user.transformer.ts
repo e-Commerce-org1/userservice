@@ -1,4 +1,3 @@
-// src/user/transformers/user.transformer.ts
 import { UserDocument } from '../schemas/user.schema';
 import { UserData } from '../interface/user-admin-grpc.interface';
 
@@ -9,6 +8,4 @@ export const mapUserToUserData = (user: UserDocument): UserData => ({
   phone: user.phoneNumber || '',
   role: user.role,
   status: user.isActive,
-  // createdAt: user.createdAt,
-  // updatedAt:user.updatedAt,
 });

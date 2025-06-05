@@ -9,42 +9,58 @@ import {
   GetUserByIdResponse,
   UpdateUserStatusRequest,
   UpdateUserStatusResponse,
-  DeleteUserRequest,
-  DeleteUserResponse,
   SearchUsersRequest,
   SearchUsersResponse,
 } from '../interface/user-admin-grpc.interface';
 import { GrpcExceptionFilter } from '../common/filters/grpc-exception.filter';
+import { grpcMethods, grpcService } from '../common/constants/admin.constant';
 
 @Controller()
 @UseFilters(new GrpcExceptionFilter())
 export class UserAdminController {
   constructor(private readonly userAdminService: UserAdminService) {}
 
-  @GrpcMethod('UserAdminGrpcService', 'GetAllUsers')
+  @GrpcMethod(grpcService , grpcMethods.getAll)
   getAllUsers(data: GetAllUsersRequest): Promise<GetAllUsersResponse> {
-    return this.userAdminService.getAllUsers(data);
+    try{
+      return this.userAdminService.getAllUsers(data);
+    }
+    catch (error) {
+      throw new Error(`Error fetching all users: ${error.message}`);
+    }
+    
   }
 
-  @GrpcMethod('UserAdminGrpcService', 'GetUserById')
+  @GrpcMethod(grpcService , grpcMethods.getbyId)
   getUserById(data: GetUserByIdRequest): Promise<GetUserByIdResponse> {
-    return this.userAdminService.getUserById(data);
+    try{
+      return this.userAdminService.getUserById(data);
+    }
+    catch (error) { 
+      throw new Error(`Error fetching user by ID: ${error.message}`);
+    }
   }
 
-  @GrpcMethod('UserAdminGrpcService', 'UpdateUserStatus')
+  @GrpcMethod(grpcService , grpcMethods.update)
   updateUserStatus(
     data: UpdateUserStatusRequest,
   ): Promise<UpdateUserStatusResponse> {
-    return this.userAdminService.updateUserStatus(data);
+    try{
+      return this.userAdminService.updateUserStatus(data);
+    }
+    catch (error) {
+      throw new Error(`Error updating user status: ${error.message}`);
+    }
+    
   }
-
-  // @GrpcMethod('UserAdminGrpcService', 'DeleteUser')
-  // deleteUser(data: DeleteUserRequest): Promise<DeleteUserResponse> {
-  //   return this.userAdminService.deleteUser(data);
-  // }
-
-  @GrpcMethod('UserAdminGrpcService', 'SearchUsers')
+  @GrpcMethod(grpcService , grpcMethods.search)
   searchUsers(data: SearchUsersRequest): Promise<SearchUsersResponse> {
-    return this.userAdminService.searchUsers(data);
+    try{
+      return this.userAdminService.searchUsers(data);
+    }
+    catch (error) {
+      throw new Error(`Error searching users: ${error.message}`);
+    }
+    
   }
 }

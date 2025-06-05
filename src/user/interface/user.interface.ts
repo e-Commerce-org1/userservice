@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs';
 
 export interface AuthServiceGrpc {
-  getToken(data: { email: string; deviceId: string; role: string; userId: string }): Observable<{
+  getToken(data: { email: string; deviceId: string; role: string; entityId: string }): Observable<{
     accessToken: string;
     refreshToken: string;
   }>;
@@ -12,7 +12,7 @@ export interface AuthServiceGrpc {
   validateToken(data: { accessToken: string }): Observable<{
     isValid: boolean;
     message?: string;
-    userId: string;
+    entityId: string;
     email?: string;
     deviceId?: string;
     role?: string;

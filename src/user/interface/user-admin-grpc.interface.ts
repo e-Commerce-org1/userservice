@@ -1,5 +1,3 @@
-// src/user/interfaces/user-admin.grpc.interface.ts
-
 export interface GetAllUsersRequest {
   page?: number;
   limit?: number;
