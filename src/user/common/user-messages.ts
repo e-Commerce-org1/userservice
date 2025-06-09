@@ -53,4 +53,9 @@ export const RESPONSE_MESSAGES = {
   ERROR_FETCHING_USERS: 'Error fetching users',
   ERROR_FETCHING_USER: 'Error fetching user',
   ERROR_UPDATING_STATUS: 'Error updating user status',
+  EMAIL_OTP_REQUIRE:'Email and OTP are required',
+  PASSWORD_RESET_TOKEN_REQUIRED: 'Email, new password, and reset token are required',
+  authentication_required: 'User authentication required',
+  REFRESH_TOKEN_REQUIRE:'Refresh token is required',
+  ACCESS_TOKEN_REQUIRED:'Access token is required',
 };

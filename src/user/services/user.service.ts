@@ -425,35 +425,58 @@ async updateAddress(
   addressId: string,
   dto: UpdateAddressDto,
 ): Promise<ApiResponse<{ address: UserDocument['addresses'][number] }>> {
-  try{
+  try {
     const user = await this.userDao.findUserById(userId);
-  if (!user) {
-    logger.warn(`Update address failed: User not found - ${userId}`);
-    throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
-  }
+    if (!user) {
+      logger.warn(`Update address failed: User not found - ${userId}`);
+      throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
+    }
 
-  const addressIndex = user.addresses.findIndex((addr) => addr._id?.toString() === addressId);
-  if (addressIndex === -1) {
-    logger.warn(`Update address failed: Address not found - ${addressId}`);
-    throw CustomException.notFound(RESPONSE_MESSAGES.ADDRESS_NOT_FOUND);
-  }
-  if (dto.isDefault) {
-    user.addresses.forEach((addr) => (addr.isDefault = false));
-  }
+    // If isDefault is true, reset all isDefault values to false first
+    if (dto.isDefault) {
+      await this.userModel.updateOne(
+        { _id: userId },
+        { $set: { 'addresses.$[].isDefault': false } }
+      );
+    }
 
-  Object.assign(user.addresses[addressIndex], dto);
-  await user.save();
+    const updateResult = await this.userModel.updateOne(
+      { _id: userId, 'addresses._id': addressId },
+      {
+        $set: Object.fromEntries(
+          Object.entries(dto).map(([key, value]) => [`addresses.$.${key}`, value])
+        ),
+      }
+    );
 
-  logger.info(`Address updated for userId: ${userId}, addressId: ${addressId}`);
-  return ResponseHelper.success(RESPONSE_MESSAGES.ADDRESS_UPDATED_SUCCESS, {
-    address: user.addresses[addressIndex],
-  });
+    if (updateResult.modifiedCount === 0) {
+      logger.warn(`Update address failed: Address not found - ${addressId}`);
+      throw CustomException.notFound(RESPONSE_MESSAGES.ADDRESS_NOT_FOUND);
+    }
+
+    // Fetch the updated address (optional but useful for response)
+    const updatedUser = await this.userDao.findUserById(userId);
+    if (!updatedUser) {
+      logger.warn(`Update address failed: User not found after update - ${userId}`);
+      throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
+    }
+    const updatedAddress = updatedUser.addresses.find((addr) => addr._id?.toString() === addressId);
+
+    if (!updatedAddress) {
+      logger.warn(`Update address failed: Address not found after update - ${addressId}`);
+      throw CustomException.notFound(RESPONSE_MESSAGES.ADDRESS_NOT_FOUND);
+    }
+
+    logger.info(`Address updated for userId: ${userId}, addressId: ${addressId}`);
+    return ResponseHelper.success(RESPONSE_MESSAGES.ADDRESS_UPDATED_SUCCESS, {
+      address: updatedAddress,
+    });
+  } catch (error) {
+    logger.error(`update address error: ${error.message}`);
+    throw CustomException.internalServererror(RESPONSE_MESSAGES.ADDRESSES_RETRIEVAL_FAILED);
   }
-  catch(error){
-    logger.error(`update addresses error: ${error.message}`);    
-  throw CustomException.internalServererror(RESPONSE_MESSAGES.ADDRESSES_RETRIEVAL_FAILED);
 }
-  }
+
 
 
 async deleteAddress(userId: string, addressId: string): Promise<ApiResponse<null>> {

@@ -26,7 +26,6 @@ import { VerifyOtpDto } from '../dto/verify-otp.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { LoginResponseDto } from '../dto/login-response.dto';
 import { UpdateAddressDto } from '../dto/update-address.dto';
 import { HTTP_STATUS } from '../common/http-status';
 import { RESPONSE_MESSAGES } from '../common/user-messages';
@@ -120,7 +119,7 @@ export class UserController {
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({
     status: HTTP_STATUS.OK,
-    type: LoginResponseDto,
+    //type: LoginResponseDto,
     description: RESPONSE_MESSAGES.LOGIN_SUCCESS,
   })
   @ApiResponse({
@@ -219,7 +218,7 @@ export class UserController {
   async verifyPasswordResetOTP(@Body() dto: VerifyOtpDto) {
     try {
       if (!dto.email || !dto.otp) {
-        throw CustomException.badRequest('Email and OTP are required');
+        throw CustomException.badRequest(RESPONSE_MESSAGES.EMAIL_OTP_REQUIRE);
       }
       
       logger.info(`OTP verification attempt for email: ${dto.email}`);
@@ -242,7 +241,7 @@ export class UserController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     try {
       if (!dto.email || !dto.newPassword || !dto.resetToken) {
-        throw CustomException.badRequest('Email, new password, and reset token are required');
+        throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_RESET_TOKEN_REQUIRED);
       }
       
       logger.info(`Password reset attempt for email: ${dto.email}`);
@@ -271,7 +270,7 @@ export class UserController {
   async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
     try {
       if (!req.user?.userId) {
-        throw CustomException.unauthorized('User authentication required');
+        throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
       
       if (!changePasswordDto.newPassword) {
@@ -304,7 +303,7 @@ export class UserController {
   async refreshToken(@Request() req, @Body() body: { refreshToken: string }) {
     try {
       if (!body.refreshToken) {
-        throw CustomException.badRequest('Refresh token is required');
+        throw CustomException.badRequest(RESPONSE_MESSAGES.REFRESH_TOKEN_REQUIRE);
       }
       
       logger.info(`Token refresh attempt for user: ${req.user?.userId}`);
@@ -328,7 +327,7 @@ export class UserController {
   async addAddress(@Request() req, @Body() createAddressDto: CreateAddressDto) {
     try {
       if (!req.user?.userId) {
-        throw CustomException.unauthorized('User authentication required');
+        throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
       
       logger.info(`Add address attempt for user: ${req.user.userId}`);
@@ -352,7 +351,7 @@ export class UserController {
   async getUserAddresses(@Request() req) {
     try {
       if (!req.user?.userId) {
-        throw CustomException.unauthorized('User authentication required');
+        throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
       
       logger.info(`Get addresses attempt for user: ${req.user.userId}`);
@@ -385,7 +384,7 @@ export class UserController {
   ) {
     try {
       if (!req.user?.userId) {
-        throw CustomException.unauthorized('User authentication required');
+        throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
       
       if (!addressId) {
@@ -418,7 +417,7 @@ export class UserController {
   async deleteAddress(@Request() req, @Param('addressId') addressId: string) {
     try {
       if (!req.user?.userId) {
-        throw CustomException.unauthorized('User authentication required');
+        throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
       
       if (!addressId) {
@@ -450,7 +449,7 @@ export class UserController {
   async getProfile(@Request() req) {
     try {
       if (!req.user?.userId) {
-        throw CustomException.unauthorized('User authentication required');
+        throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
       
       logger.info(`Get profile attempt for user: ${req.user.userId}`);
@@ -478,7 +477,7 @@ export class UserController {
       const accessToken = authHeader?.replace('Bearer ', '');
       
       if (!accessToken) {
-        throw CustomException.unauthorized('Access token is required');
+        throw CustomException.unauthorized(RESPONSE_MESSAGES.ACCESS_TOKEN_REQUIRED);
       }
       
       logger.info(`Logout attempt for user: ${req.user?.userId}`);
