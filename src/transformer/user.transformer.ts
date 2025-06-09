@@ -1,4 +1,4 @@
-import { UserDocument } from '../schemas/user.schema';
+import { UserDocument } from '../schema/user.schema';
 import { UserData } from '../interface/user-admin-grpc.interface';
 
 export const mapUserToUserData = (user: UserDocument): UserData => ({

@@ -1,12 +1,13 @@
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { logger } from './user/common/logger';
+import { logger } from './common/logger';
 import * as dotenv from 'dotenv';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
-import {packageName} from './user/common/constants/admin.constant'
+import {packageName} from './common/constants/admin.constant'
+import { AllExceptionsFilter } from './common/filters/user.filter';
 
 dotenv.config();
 
@@ -14,6 +15,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: logger, 
   });
+  // const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors();
   app.useGlobalPipes(
     new ValidationPipe({
@@ -43,8 +46,8 @@ async function bootstrap() {
       transport: Transport.GRPC,
       options: {
         package: packageName, 
-        protoPath: join(__dirname, 'proto/admin.proto'), 
-        url: process.env.GRPC_URL || '0.0.0.0:5051',
+        protoPath: join(__dirname, 'proto/user.proto'), 
+        url: process.env.GRPC_URL ,
         loader: {
           keepCase: true,
           longs: String,

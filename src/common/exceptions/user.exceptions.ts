@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { HTTP_STATUS } from '../http-status';
+import { HTTP_STATUS } from '../constants/http-status';
 export class CustomException  {
   static badRequest(message :string) {
   throw new BadRequestException({

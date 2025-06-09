@@ -11,24 +11,24 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
-import { User, UserDocument } from '../schemas/user.schema';
-import { CreateUserDto } from '../dto/create-user.dto';
-import { LoginUserDto } from '../dto/login-user.dto';
-import { CreateAddressDto } from '../dto/create-address.dto';
-import { UpdateAddressDto } from '../dto/update-address.dto';
-import { RESPONSE_MESSAGES } from '../common/user-messages';
-import { ResponseHelper, ApiResponse } from '../common/response.helper';
-import { logger } from '../common/logger';
-import { EmailService } from '../provider/email/email.service';
-import { RedisService } from '../provider/redis/redis.service';
+import { User, UserDocument } from '../../schema/user.schema';
+import { CreateUserDto } from './dto/create-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
+import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
+import { RESPONSE_MESSAGES } from '../../common/constants/user-messages';
+import { ResponseHelper, ApiResponse } from '../../common/response.helper';
+import { logger } from '../../common/logger';
+import { EmailService } from '../../provider/email/email.service';
+import { RedisService } from '../../provider/redis/redis.service';
 import { ClientGrpc } from '@nestjs/microservices';
 import { Observable, lastValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
-import { generateOTP } from '../utils/generateOtp';
-import { generateResetToken } from '../utils/gen-reset-token';
-import { AuthServiceGrpc } from '../interface/user.interface';
-import {CustomException} from '../common/exceptions/user.exceptions'
-import { UserDao } from '../dao/user.dao';
+import { generateOTP } from '../../utils/generateOtp';
+import { generateResetToken } from '../../utils/gen-reset-token';
+import { AuthServiceGrpc } from '../../interface/user.interface';
+import {CustomException} from '../../common/exceptions/user.exceptions'
+import { UserDao } from './dao/user.dao';
 
 @Injectable()
 export class UserService implements OnModuleInit {

@@ -1,4 +1,4 @@
-import { HTTP_STATUS, HttpStatusCode } from './http-status';
+import { HTTP_STATUS, HttpStatusCode } from './constants/http-status';
 
 export interface ApiResponse<T = any> {
   success: boolean;

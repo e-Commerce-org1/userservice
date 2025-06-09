@@ -1,7 +1,7 @@
 // src/user/services/user-admin.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from '../schemas/user.schema';
+import { User, UserDocument } from '../../schema/user.schema';
 import { Model } from 'mongoose';
 import {
   GetAllUsersRequest,
@@ -13,9 +13,9 @@ import {
   SearchUsersRequest,
   SearchUsersResponse,
   UserData,
-} from '../interface/user-admin-grpc.interface';
-import { mapUserToUserData } from '../transformer/user.transformer';
-import { RESPONSE_MESSAGES } from '../common/user-messages';
+} from '../../interface/user-admin-grpc.interface';
+import { mapUserToUserData } from '../../transformer/user.transformer';
+import { RESPONSE_MESSAGES } from '../../common/constants/user-messages';
 
 @Injectable()
 export class UserAdminService {

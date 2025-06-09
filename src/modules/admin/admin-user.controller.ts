@@ -1,7 +1,7 @@
 // src/user/controllers/user-admin.controller.ts
 import { Controller, UseFilters } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
-import { UserAdminService } from '../services/admin-user.service';
+import { UserAdminService } from './admin-user.service';
 import {
   GetAllUsersRequest,
   GetAllUsersResponse,
@@ -11,9 +11,9 @@ import {
   UpdateUserStatusResponse,
   SearchUsersRequest,
   SearchUsersResponse,
-} from '../interface/user-admin-grpc.interface';
-import { GrpcExceptionFilter } from '../common/filters/grpc-exception.filter';
-import { grpcMethods, grpcService } from '../common/constants/admin.constant';
+} from '../../interface/user-admin-grpc.interface';
+import { GrpcExceptionFilter } from '../../common/filters/grpc-exception.filter';
+import { grpcMethods, grpcService } from '../../common/constants/admin.constant';
 
 @Controller()
 @UseFilters(new GrpcExceptionFilter())

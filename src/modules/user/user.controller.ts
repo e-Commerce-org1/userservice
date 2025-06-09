@@ -12,27 +12,24 @@ import {
   Delete,
   Req,
   Inject,
-  UnauthorizedException,
-  InternalServerErrorException,
-  BadRequestException,
 } from '@nestjs/common';
-import { UserService } from '../services/user.service';
-import { CreateUserDto } from '../dto/create-user.dto';
-import { LoginUserDto } from '../dto/login-user.dto';
-import { CreateAddressDto } from '../dto/create-address.dto';
-import { VerifyEmailDto } from '../dto/verify-email.dto';
-import { PasswordResetInitDto } from '../dto/ password-reset-init.dto';
-import { VerifyOtpDto } from '../dto/verify-otp.dto';
-import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { ChangePasswordDto } from '../dto/change-password.dto';
+import { UserService } from './user.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
+import { CreateAddressDto } from './dto/create-address.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { PasswordResetInitDto } from './dto/ password-reset-init.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { UpdateAddressDto } from '../dto/update-address.dto';
-import { HTTP_STATUS } from '../common/http-status';
-import { RESPONSE_MESSAGES } from '../common/user-messages';
-import { GoogleOAuthGuard } from '../middleware/google-oauth.guard';
-import { AuthGuard } from '../middleware/auth.guard';
-import { logger } from '../common/logger';
-import { CustomException } from '../common/exceptions/user.exceptions';
+import { UpdateAddressDto } from './dto/update-address.dto';
+import { HTTP_STATUS } from '../../common/constants/http-status';
+import { RESPONSE_MESSAGES } from '../../common/constants/user-messages';
+import { GoogleOAuthGuard } from '../../middleware/google-oauth.guard';
+import { AuthGuard } from '../../middleware/auth.guard';
+import { logger } from '../../common/logger';
+import { CustomException } from '../../common/exceptions/user.exceptions';
 
 @ApiTags('Users')
 @Controller('users')
