@@ -34,6 +34,8 @@ export class User {
 @Prop({
   type: [
     {
+      Name: { type: String, required: true },
+      phoneNumber: { type: String, required: true, unique: true },
       street: { type: String, required: true },
       city: { type: String, required: true },
       state: { type: String, required: true },

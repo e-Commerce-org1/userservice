@@ -58,4 +58,12 @@ export const RESPONSE_MESSAGES = {
   authentication_required: 'User authentication required',
   REFRESH_TOKEN_REQUIRE:'Refresh token is required',
   ACCESS_TOKEN_REQUIRED:'Access token is required',
+  INCORRECT_OLD_PASSWORD: 'Incorrect old password',
+  PASSWORD_SAME_AS_OLD: 'New password cannot be the same as the old password',
+  PASSWORD_SAME_AS_CURRENT: 'New password cannot be the same as the current password',
+  PROFILE_UPDATED_SUCCESS: 'Profile updated successfully',
+  USER_NOT_BLOCKED: 'User is not blocked',
+  USER_UNBLOCKED_SUCCESSFULLY: 'User unblocked successfully',
+  ERROR_UNBLOCKING_USER: 'Error unblocking user',
 };
+

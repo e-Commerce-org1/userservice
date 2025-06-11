@@ -49,14 +49,24 @@ export interface DeleteUserResponse {
 
 export interface SearchUsersRequest {
   query: string;
-  searchBy: string;
-  limit?: number;
+  status: 'active' | 'inactive' | 'block',
+  limit: number;
 }
 
 export interface SearchUsersResponse {
   users: UserData[];
   total: number;
   success: boolean;
+}
+
+export interface UnblockUserRequest {
+  userId: string;
+}
+
+export interface UnblockUserResponse {
+  user?: UserData;
+  success: boolean;
+  message: string;
 }
 
 export interface UserData {

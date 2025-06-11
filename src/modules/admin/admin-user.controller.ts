@@ -1,4 +1,3 @@
-// src/user/controllers/user-admin.controller.ts
 import { Controller, UseFilters } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { UserAdminService } from './admin-user.service';
@@ -53,6 +52,17 @@ export class UserAdminController {
     }
     
   }
+
+  @GrpcMethod(grpcService , grpcMethods.unblock)
+  unblockUser(data: GetUserByIdRequest): Promise<GetUserByIdResponse> {
+    try{
+      return this.userAdminService.unblockUser(data);
+    }
+    catch (error) {
+      throw new Error(`Error unblocking user: ${error.message}`);
+    }
+  }
+
   @GrpcMethod(grpcService , grpcMethods.search)
   searchUsers(data: SearchUsersRequest): Promise<SearchUsersResponse> {
     try{

@@ -30,6 +30,7 @@ import { GoogleOAuthGuard } from '../../middleware/google-oauth.guard';
 import { AuthGuard } from '../../middleware/auth.guard';
 import { logger } from '../../common/logger';
 import { CustomException } from '../../common/exceptions/user.exceptions';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -275,7 +276,7 @@ export class UserController {
       }
       
       logger.info(`Password change attempt for user: ${req.user.userId}`);
-      const result = await this.userService.changePassword(req.user.userId, changePasswordDto.newPassword);
+      const result = await this.userService.changePassword(req.user.userId, changePasswordDto.oldPassword,changePasswordDto.newPassword);
       logger.info(`Password change successful for user: ${req.user.userId}`);
       return result;
     } catch (error) {
@@ -455,6 +456,34 @@ export class UserController {
       return result;
     } catch (error) {
       logger.error(`Get profile failed for user: ${req.user?.userId} - ${error.message}`);
+      throw error;
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch('edit-profile')
+  @HttpCode(HTTP_STATUS.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Edit user profile (authenticated)' })
+  @ApiResponse({
+    status: HTTP_STATUS.OK,
+    description: RESPONSE_MESSAGES.PROFILE_UPDATED_SUCCESS,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.NOT_FOUND,
+    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  })
+  async editProfile(@Request() req, @Body() updateUserDto: UpdateProfileDto) {
+    try {
+      if (!req.user?.userId) {
+        throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
+      }
+      logger.info(`Edit profile attempt for user: ${req.user.userId}`);
+      const result = await this.userService.editProfile(req.user.userId, updateUserDto);
+      logger.info(`Edit profile successful for user: ${req.user.userId}`);
+      return result;
+    } catch (error) {
+      logger.error(`Edit profile failed for user: ${req.user?.userId} - ${error.message}`);
       throw error;
     }
   }

@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from '../../../schema/user.schema';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { CreateAddressDto } from '../dto/create-address.dto';
-import { UpdateAddressDto } from '../dto/update-address.dto';
+import { UpdateAddressDto } from '../dto/update-address.dto'
 
 @Injectable()
 export class UserDao {
@@ -99,4 +99,18 @@ export class UserDao {
   findAddressIndex(user: UserDocument, addressId: string): number {
     return user.addresses.findIndex((addr) => addr._id?.toString() === addressId);
   }
+
+async findByIdAndUpdateWithoutPassword(
+  userId: string,
+  updateData: Partial<User>,
+): Promise<UserDocument | null> {
+  const user = await this.userModel
+    .findByIdAndUpdate(userId, { $set: updateData }, { new: true })
+    .select('-password')
+    .exec();
+
+  return user as UserDocument | null;
+}
+
+
 }

@@ -55,57 +55,70 @@ export class UserService implements OnModuleInit {
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const createdUser = new this.userModel({
+    const userId = new this.userModel()._id.toString();
+    const verificationToken = generateOTP();
+    
+    const userData = {
       ...dto,
       password: hashedPassword,
       isVerified: false,
-    });
-
+      userId,
+    };
     try {
-      const result = await createdUser.save();
-      const verificationToken = generateOTP();
-       await Promise.all([
-      this.redisService.set(`verification:${result._id}`, verificationToken, 60 * 60),
-      this.emailService.sendVerificationEmail(dto.email, verificationToken),
-    ]);
-      logger.info(`User signed up and verification email sent: ${dto.email}`);
-      return ResponseHelper.created(RESPONSE_MESSAGES.USER_REGISTERED_SUCCESS, {
-        userId: result._id.toString(),
-      });
+      await Promise.all([
+        this.redisService.set(`pending_user:${userId}`, JSON.stringify(userData), 60 * 60),
+        this.emailService.sendVerificationEmail(dto.email, verificationToken),
+        this.redisService.set(`verification:${userId}`, verificationToken, 60 * 60),
+      ]);
+      logger.info(`User signup initiated and verification email sent: ${dto.email}`);
+      return ResponseHelper.created(RESPONSE_MESSAGES.USER_REGISTERED_SUCCESS, { userId });
     } catch (error) {
       logger.error(`Signup error: ${error.message}`);
       throw CustomException.internalServererror(RESPONSE_MESSAGES.SIGNUP_FAILED);
     }
   }
 
-  async verifyEmail(userId: string, token: string): Promise<ApiResponse> {
-    try{
-      const storedToken = await this.redisService.get(`verification:${userId}`);
-    if(!storedToken){
-      logger.warn(`Email verification failed: Token is expire for user ${userId}`);
+async verifyEmail(userId: string, token: string): Promise<ApiResponse> {
+  try {
+    const storedToken = await this.redisService.get(`verification:${userId}`);
+    if (!storedToken) {
+      logger.warn(`Email verification failed: Token expired for user ${userId}`);
       throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_VERIFICATION_TOKEN);
     }
-    if ( storedToken !== token) {
+    if (storedToken !== token) {
       logger.warn(`Email verification failed: Invalid token for user ${userId}`);
       throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_VERIFICATION_TOKEN);
     }
 
-    const updatedUser = await this.userDao.updateUserVerificationStatus(userId,true);
-    if (!updatedUser) {
-      logger.warn(`Email verification failed: User not found - ${userId}`);
+    const userDataString = await this.redisService.get(`pending_user:${userId}`);
+    if (!userDataString) {
+      logger.warn(`Email verification failed: User data not found - ${userId}`);
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
 
-    await this.redisService.del(`verification:${userId}`);
-    logger.info(`Email verified for user: ${userId}`);
-    return ResponseHelper.success(RESPONSE_MESSAGES.EMAIL_VERIFIED_SUCCESS);
-    }
-    catch (error) { 
-      logger.error(`Email verification error: ${error.message}`);
+    const userData = JSON.parse(userDataString);
+    const createdUser = new this.userModel({
+      ...userData,
+      isVerified: true,
+    });
+
+    const savedUser = await createdUser.save();
+    if (!savedUser) {
+      logger.warn(`Email verification failed: Failed to save user - ${userId}`);
       throw CustomException.internalServererror(RESPONSE_MESSAGES.EMAIL_VERIFICATION_FAILED);
     }
-  }
 
+    await Promise.all([
+      this.redisService.del(`pending_user:${userId}`),
+      this.redisService.del(`verification:${userId}`),
+    ]);
+    logger.info(`Email verified and user saved for: ${userId}`);
+    return ResponseHelper.success(RESPONSE_MESSAGES.EMAIL_VERIFIED_SUCCESS);
+  } catch (error) {
+    logger.error(`Email verification error: ${error.message}`);
+    throw CustomException.internalServererror(RESPONSE_MESSAGES.EMAIL_VERIFICATION_FAILED);
+  }
+}
   async login(dto: LoginUserDto): Promise<
     ApiResponse<{
       user: Partial<UserDocument>;
@@ -232,6 +245,7 @@ refreshToken: string,
 
   async changePassword(
     userId: string,
+    oldPassword: string,
     newPassword: string,
   ): Promise<ApiResponse> {
     try{
@@ -239,6 +253,27 @@ refreshToken: string,
     if (!user) {
       logger.warn(`Password change failed: User not found - ${userId}`);
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
+    }
+    if (newPassword.length < 8) {
+      logger.warn(`Password change failed: Password too short for user ${userId}`);
+      throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_TOO_SHORT);
+    }
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      logger.warn(`Password change failed: Incorrect old password for user ${userId}`);
+      throw CustomException.unauthorized(RESPONSE_MESSAGES.INCORRECT_OLD_PASSWORD);
+    }
+    if (oldPassword === newPassword) {
+      logger.warn(`Password change failed: New password cannot be the same as old password for user ${userId}`);
+      throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_SAME_AS_OLD);
+    }
+    if (newPassword === user.password) {
+      logger.warn(`Password change failed: New password cannot be the same as current password for user ${userId}`);
+      throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_SAME_AS_CURRENT);
+    }
+    if (newPassword.length < 8) {
+      logger.warn(`Password change failed: New password too short for user ${userId}`);
+      throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_TOO_SHORT);
     }
     const hashed = await bcrypt.hash(newPassword, 10);
     await this.userDao.updateUserPassword(userId, hashed);
@@ -477,8 +512,6 @@ async updateAddress(
   }
 }
 
-
-
 async deleteAddress(userId: string, addressId: string): Promise<ApiResponse<null>> {
   try{
     const user = await this.userDao.findUserById(userId);
@@ -515,6 +548,25 @@ async deleteAddress(userId: string, addressId: string): Promise<ApiResponse<null
     logger.info(`Fetched user by ID: ${userId}`);
     return ResponseHelper.success(RESPONSE_MESSAGES.PROFILE_RETRIEVED_SUCCESS, user);
   }
+
+async editProfile(
+  userId: string,
+  updateData: { name?: string; phoneNumber?: string }
+): Promise<ApiResponse<UserDocument>> {
+  const updatedUser = await this.userDao.findByIdAndUpdateWithoutPassword(
+    userId,
+    updateData
+  );
+
+  if (!updatedUser) {
+    logger.warn(`Edit profile failed: User not found - ${userId}`);
+    throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
+  }
+
+  logger.info(`Updated profile for user: ${userId}`);
+  return ResponseHelper.success(RESPONSE_MESSAGES.PROFILE_UPDATED_SUCCESS, updatedUser);
+}
+
 
   async logout(accessToken: string): Promise<ApiResponse<{ success: boolean }>> {
   try {

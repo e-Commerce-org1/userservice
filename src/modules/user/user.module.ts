@@ -1,17 +1,12 @@
 import { Module } from '@nestjs/common';
-// import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
-
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-// import { User, UserSchema } from '../../schema/user.schema';
 import { EmailModule } from '../../provider/email/email.module';
 import { RedisModule } from '../../provider/redis/redis.module';
 import { AuthGuard } from '../../middleware/auth.guard';
-// import { UserAdminController } from '../admin/admin-user.controller';
-// import { UserAdminService } from '../admin/admin-user.service';
 import { GoogleStrategy } from '../../middleware/google.strategy';
 import { UserDao } from './dao/user.dao';
 import { MongooseModule } from '@nestjs/mongoose';

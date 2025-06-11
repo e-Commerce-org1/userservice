@@ -6,8 +6,13 @@ service UserAdminGrpcService {
   rpc GetAllUsers(GetAllUsersRequest) returns (GetAllUsersResponse);
   rpc GetUserById(GetUserByIdRequest) returns (GetUserByIdResponse);
   rpc UpdateUserStatus(UpdateUserStatusRequest) returns (UpdateUserStatusResponse);
+  rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse);
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+  rpc AddAddress (AddAddressRequest) returns (AddAddressResponse); 
+  rpc GetUserAddresses (GetUserAddressesRequest) returns (GetUserAddressesResponse);
+  rpc UpdateAddress (UpdateAddressRequest) returns (UpdateAddressResponse);
+  rpc DeleteAddress (DeleteAddressRequest) returns (DeleteAddressResponse); 
 }
 
 message GetAllUsersRequest {
@@ -47,6 +52,16 @@ message UpdateUserStatusResponse {
   UserData user = 3;
 }
 
+message UnblockUserRequest{
+  string userId = 1;
+}
+
+message UnblockUserResponse {
+  bool success = 1;
+  string message = 2;
+  UserData user = 3;
+}
+
 message DeleteUserRequest {
   string userId = 1;
   string reason = 3;
@@ -59,7 +74,7 @@ message DeleteUserResponse {
 
 message SearchUsersRequest {
   string query = 1;
-  string searchBy = 2;
+  string status = 2;
   int32 limit = 3;
 }
 
@@ -78,10 +93,50 @@ message UserData {
   string role = 6;
 }
 
+message AddAddressRequest {
+  string userId = 1;
+  Address address = 2;
+}
+
 message Address {
   string street = 1;
   string city = 2;
-  string state = 3;
-  string country = 4;
-  string postalCode = 5;
+  string state = 3; 
+  string postalCode = 4; 
+  string country = 5; 
+  optional bool isDefault=6;
+  optional string addressType=7;
+}
+
+message AddAddressResponse { 
+  string addressId = 1; 
+  string message = 2; 
+}
+
+message GetUserAddressesRequest { 
+  string userId = 1; 
+}
+
+message GetUserAddressesResponse {
+  repeated Address addresses = 1; 
+}
+
+message UpdateAddressRequest {
+  string userId = 1; 
+  string addressId = 2; 
+  Address address = 3; 
+}
+
+message UpdateAddressResponse {
+  string addressId = 1; 
+  string message = 2; 
+}
+
+message DeleteAddressRequest {
+  string userId = 1; 
+  string addressId = 2; 
+}
+
+message DeleteAddressResponse {
+  string message = 1; 
 }

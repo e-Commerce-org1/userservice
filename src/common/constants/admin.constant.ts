@@ -11,6 +11,16 @@ export const grpcMethods = {
 
     delete: 'DeleteUser',
 
+    unblock: 'UnblockUser',
+
     search: 'SearchUsers',
+
+    AddAddress: 'AddAddress',
+
+    GetUserAddresses: 'GetUserAddresses',
+
+    UpdateAddress: 'UpdateAddress', 
+    
+    deleteAddress: 'DeleteAddress',
 
 }
