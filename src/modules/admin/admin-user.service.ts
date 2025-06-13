@@ -1,7 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from '../../schema/user.schema';
-import { FilterQuery, Model, Types } from 'mongoose';
+import { Injectable } from '@nestjs/common';
+import { UserAdminDao } from './dao/admin.dao';
 import {
   GetAllUsersRequest,
   GetAllUsersResponse,
@@ -11,237 +9,163 @@ import {
   UpdateUserStatusResponse,
   SearchUsersRequest,
   SearchUsersResponse,
-  UserData,
-  UnblockUserResponse,
   UnblockUserRequest,
+  UnblockUserResponse,
 } from '../../interface/user-admin-grpc.interface';
 import { mapUserToUserData } from '../../transformer/user.transformer';
 import { RESPONSE_MESSAGES } from '../../common/constants/user-messages';
+import { logger } from '../../common/logger';
+import { CustomException } from '../../common/exceptions/user.exceptions';
 
 @Injectable()
 export class UserAdminService {
-  private readonly logger = new Logger(UserAdminService.name);
+  constructor(private readonly userAdminDao: UserAdminDao) {}
 
-  constructor(
-    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
-  ) {}
-
-  async getAllUsers(
-    request: GetAllUsersRequest,
-  ): Promise<GetAllUsersResponse> {
-    try{
+  async getAllUsers(request: GetAllUsersRequest): Promise<GetAllUsersResponse> {
     const page = Number(request.page) || 1;
     const limit = Number(request.limit) || 10;
-    const sortBy = request.sortBy || 'createdAt';
-    const sortOrder = request.sortOrder || 'desc';
     const skip = (page - 1) * limit;
 
-    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+    try {
+      const [users, total] = await Promise.all([
+        this.userAdminDao.findAll(skip, limit),
+        this.userAdminDao.countAll(),
+      ]);
 
-    const [users, total] = await Promise.all([
-      this.userModel
-        .find()
-        .sort({ [sortBy]: sortDirection })
-        .skip(skip)
-        .limit(limit)
-        .exec(),
-      this.userModel.countDocuments(),
-    ]);
+      logger.log({ level: 'info', message: `Fetched ${users.length} users` });
 
-    const response: GetAllUsersResponse = {
-      users: users.map(mapUserToUserData),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-      success: true,
-      message: RESPONSE_MESSAGES.USER_FETCHED,
-    };
-
-    this.logger.log(`Fetched ${users.length} users`);
-
-    return response;
-    }
-    catch (error) {
-      this.logger.error('Error fetching users', error);
+      return {
+        users: users.map(mapUserToUserData),
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        success: true,
+        message: RESPONSE_MESSAGES.USER_FETCHED,
+      };
+    } catch (error) {
+      logger.error(`Error fetching users: ${error.message}`);
       return {
         users: [],
         total: 0,
-        page: request.page || 1,
-        limit: request.limit || 10,
+        page,
+        limit,
         totalPages: 0,
         success: false,
         message: RESPONSE_MESSAGES.ERROR_FETCHING_USERS,
       };
     }
-    
   }
 
-  async getUserById(
-    request: GetUserByIdRequest,
-  ): Promise<GetUserByIdResponse> {
-    try{
-      const user = await this.userModel.findById(request.userId).exec();
+  async getUserById(request: GetUserByIdRequest): Promise<GetUserByIdResponse> {
+    try {
+      const user = await this.userAdminDao.findUserById(request.userId);
+      if (!user) {
+        return {
+          user: undefined,
+          success: false,
+          message: RESPONSE_MESSAGES.USER_NOT_FOUND,
+        };
+      }
 
-    if (!user) {
       return {
-        user: undefined,
-        success: false,
-        message: RESPONSE_MESSAGES.USER_NOT_FOUND,
+        user: mapUserToUserData(user),
+        success: true,
+        message: RESPONSE_MESSAGES.INDIVIDUAL_USER_FETCHED,
       };
-    }
-
-    return {
-      user: mapUserToUserData(user),
-      success: true,
-      message: RESPONSE_MESSAGES.INDIVIDUAL_USER_FETCHED,
-    };
-    }
-    catch (error) {
-      this.logger.error(`Error fetching user by ID ${request.userId}`, error);
+    } catch (error) {
+      logger.error(`Error fetching user by ID ${request.userId}: ${error.message}`);
       return {
         user: undefined,
         success: false,
         message: RESPONSE_MESSAGES.ERROR_FETCHING_USER,
       };
     }
-    
   }
 
-  async updateUserStatus(
-    request: UpdateUserStatusRequest,
-  ): Promise<UpdateUserStatusResponse> {
-    try{
-      const { userId, status } = request;
-    const user = await this.userModel.findById(userId).exec();
-    if (!user) {
-      return {
-        user: undefined,
-        success: false,
-        message: RESPONSE_MESSAGES.USER_NOT_FOUND,
-      };
-    }
-    user.isActive = status;
-    await user.save();
+  async updateUserStatus(request: UpdateUserStatusRequest): Promise<UpdateUserStatusResponse> {
+    try {
+      const user = await this.userAdminDao.findUserById(request.userId);
+      if (!user) {
+        return {
+          success: false,
+          message: RESPONSE_MESSAGES.USER_NOT_FOUND,
+        };
+      }
 
-    return {
-      user: mapUserToUserData(user),
-      success: true,
-     message:RESPONSE_MESSAGES.STATUS_UPDATED,
-    };
-    }
-    catch (error) {
-      this.logger.error(`Error updating user status for ID ${request.userId}`, error);
+      await this.userAdminDao.updateStatus(request.userId, 'block');
+
       return {
-        user: undefined,
+        success: true,
+        message: RESPONSE_MESSAGES.STATUS_UPDATED,
+      };
+    } catch (error) {
+      logger.error(`Error updating user status for ID ${request.userId}: ${error.message}`);
+      return {
         success: false,
         message: RESPONSE_MESSAGES.ERROR_UPDATING_STATUS,
       };
     }
-    
   }
 
-//   async searchUsers(
-//     request: SearchUsersRequest,
-//   ): Promise<SearchUsersResponse> {
-//     try{
-//       const { query = '', searchBy = 'name', limit = 10 } = request;
+  async unblockUser(request: UnblockUserRequest): Promise<UnblockUserResponse> {
+    try {
+      const user = await this.userAdminDao.findUserById(request.userId);
+      if (!user) {
+        return {
+          success: false,
+          message: RESPONSE_MESSAGES.USER_NOT_FOUND,
+        };
+      }
 
-//     const users = await this.userModel
-//       .find({ [searchBy]: { $regex: query, $options: 'i' } })
-//       .limit(limit)
-//       .exec();
+      if (user.isActive !== 'block') {
+        return {
+          success: false,
+          message: RESPONSE_MESSAGES.USER_NOT_BLOCKED,
+        };
+      }
 
-//     return {
-//       users: users.map(mapUserToUserData),
-//       total: users.length,
-//       success: true,
-//     };
-//     }
-//     catch (error) {
-//       this.logger.error(`Error searching users with query "${request.query}"`, error);
-//       return {
-//         users: [],
-//         total: 0,
-//         success: false
-//       };
-//     }
-//   }
-// }
+      await this.userAdminDao.updateStatus(request.userId, 'inactive');
 
-async unblockUser(request:UnblockUserRequest): Promise<UnblockUserResponse> {
-  try {
-    const user = await this.userModel.findById(request.userId).exec();
-
-    if (!user) {
       return {
-        user: undefined,
+        success: true,
+        message: RESPONSE_MESSAGES.USER_UNBLOCKED_SUCCESSFULLY,
+      };
+    } catch (error) {
+      logger.error(`Error unblocking user ID ${request.userId}: ${error.message}`);
+      return {
         success: false,
-        message: RESPONSE_MESSAGES.USER_NOT_FOUND,
+        message: RESPONSE_MESSAGES.ERROR_UNBLOCKING_USER,
       };
     }
-
-    if (user.isActive !== 'block') {
-      return {
-        user: mapUserToUserData(user),
-        success: false,
-        message: RESPONSE_MESSAGES.USER_NOT_BLOCKED,
-      };
-    }
-
-    user.isActive = 'inactive'; // Set to inactive when unblocking
-    await user.save();
-
-    return {
-      user: mapUserToUserData(user),
-      success: true,
-      message: RESPONSE_MESSAGES.USER_UNBLOCKED_SUCCESSFULLY,
-    };
-  } catch (error) {
-    this.logger.error(`Error unblocking user ID ${request.userId}`, error);
-    return {
-      user: undefined,
-      success: false,
-      message: RESPONSE_MESSAGES.ERROR_UNBLOCKING_USER,
-    };
   }
-}
 
-
-async searchUsers(request: SearchUsersRequest): Promise<SearchUsersResponse> {
-  try {
+  async searchUsers(request: SearchUsersRequest): Promise<SearchUsersResponse> {
     const { query = '', limit = 10, status } = request;
+    try {
+      const searchConditions = [
+        { name: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
+        { phoneNumber: { $regex: query, $options: 'i' } },
+      ];
 
-    // Build dynamic OR condition for query match
-    const searchConditions = [
-      { name: { $regex: query, $options: 'i' } },
-      { email: { $regex: query, $options: 'i' } },
-      { phoneNumber: { $regex: query, $options: 'i' } },
-    ];
+      const finalQuery: any = { $or: searchConditions };
+      if (status !== undefined) finalQuery.isActive = status === 'active';
 
-    const finalQuery: any = { $or: searchConditions };
+      const users = await this.userAdminDao.searchUsers(finalQuery, limit);
 
-    // If status is provided (e.g. active/inactive/block), filter by isActive
-    if (status !== undefined) {
-      // Assuming: active = true, inactive = false, block = false (example)
-      // You can customize this logic if you store status differently
-      finalQuery.isActive = status === 'active';
+      return {
+        users: users.map(mapUserToUserData),
+        total: users.length,
+        success: true,
+      };
+    } catch (error) {
+      logger.error(`Error searching users with query "${query}": ${error.message}`);
+      return {
+        users: [],
+        total: 0,
+        success: false,
+      };
     }
-
-    const users = await this.userModel.find(finalQuery).limit(Number(limit)).exec();
-
-    return {
-      users: users.map(mapUserToUserData),
-      total: users.length,
-      success: true,
-    };
-  } catch (error) {
-    this.logger.error(`Error searching users with query "${request.query}"`, error);
-    return {
-      users: [],
-      total: 0,
-      success: false,
-    };
   }
-}
 }

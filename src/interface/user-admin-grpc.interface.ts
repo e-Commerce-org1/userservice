@@ -1,8 +1,6 @@
 export interface GetAllUsersRequest {
   page?: number;
   limit?: number;
-  sortBy?: string;
-  sortOrder?: string;
 }
 
 export interface GetAllUsersResponse {
@@ -26,23 +24,10 @@ export interface GetUserByIdResponse {
 }
 
 export interface UpdateUserStatusRequest {
-  userId: string;
-  status: string;
-  reason: string;
+  userId: string
 }
 
 export interface UpdateUserStatusResponse {
-  success: boolean;
-  message: string;
-  user?: UserData;
-}
-
-export interface DeleteUserRequest {
-  userId: string;
-  reason: string;
-}
-
-export interface DeleteUserResponse {
   success: boolean;
   message: string;
 }
@@ -64,7 +49,6 @@ export interface UnblockUserRequest {
 }
 
 export interface UnblockUserResponse {
-  user?: UserData;
   success: boolean;
   message: string;
 }

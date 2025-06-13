@@ -42,14 +42,11 @@ message GetUserByIdResponse {
 
 message UpdateUserStatusRequest {
   string userId = 1;
-  string status = 2;
-  string reason = 4;
 }
 
 message UpdateUserStatusResponse {
   bool success = 1;
   string message = 2;
-  UserData user = 3;
 }
 
 message UnblockUserRequest{
@@ -59,7 +56,6 @@ message UnblockUserRequest{
 message UnblockUserResponse {
   bool success = 1;
   string message = 2;
-  UserData user = 3;
 }
 
 message DeleteUserRequest {

@@ -5,7 +5,7 @@ export interface AuthServiceGrpc {
     accessToken: string;
     refreshToken: string;
   }>;
-  refreshToken(data: {  refreshToken: string }): Observable<{
+  accessToken(data: {  refreshToken: string }): Observable<{
     accessToken: string;
   }>;
   logout(data: { accessToken: string }): Observable<{ success: boolean }>;

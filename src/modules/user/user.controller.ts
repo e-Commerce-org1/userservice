@@ -285,10 +285,10 @@ export class UserController {
     }
   }
 
-  @UseGuards(AuthGuard)
+  // @UseGuards(AuthGuard)
   @Post('refresh-token')
   @HttpCode(HTTP_STATUS.OK)
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Refresh access token (authenticated)' })
   @ApiResponse({
     status: HTTP_STATUS.OK,

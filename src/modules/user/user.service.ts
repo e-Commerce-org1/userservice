@@ -212,7 +212,7 @@ refreshToken: string,
   ): Promise<ApiResponse<{ accessToken: string }>> {
     try {
       const response = await lastValueFrom(
-        this.authService.refreshToken({
+        this.authService.accessToken({
           refreshToken,
         }),
       );
@@ -332,7 +332,7 @@ refreshToken: string,
 
     const resetToken = generateResetToken();
     await Promise.all([
-      this.redisService.set(`password-reset:${user._id}`, resetToken, 10 * 60),
+      this.redisService.set(`reset-token:${user._id}`, resetToken, 10 * 60),
       this.redisService.del(`password-reset:${user._id}`),
     ]);
 

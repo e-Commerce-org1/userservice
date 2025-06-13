@@ -3,6 +3,7 @@ import { UserAdminController } from './admin-user.controller';
 import { UserAdminService } from './admin-user.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from 'src/schema/user.schema';
+import { UserAdminDao } from './dao/admin.dao';
 
 @Module({
     imports:[
@@ -11,6 +12,6 @@ import { User, UserSchema } from 'src/schema/user.schema';
         ]),
     ],
     controllers:[UserAdminController],
-    providers:[UserAdminService,],
+    providers:[UserAdminService,UserAdminDao],
 })
 export class UserAdminModule{};
