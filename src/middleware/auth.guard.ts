@@ -29,7 +29,7 @@ async canActivate(context: ExecutionContext): Promise<boolean> {
   }
   try {
     const validation = await this.userService.validateAccessToken(token);
-   console.log(validation);
+  //  console.log(validation);
     logger.debug(`Token validation result: ${JSON.stringify(validation)}`);
     if (!validation.isValid) {
       throw new UnauthorizedException(validation.message || 'Invalid token');

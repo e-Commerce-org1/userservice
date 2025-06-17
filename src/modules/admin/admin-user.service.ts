@@ -11,6 +11,9 @@ import {
   SearchUsersResponse,
   UnblockUserRequest,
   UnblockUserResponse,
+  GetUsersByStatusRequest,
+  GetAllUsersWithoutPaginationResponse,
+  GetUsersByStatusResponse,
 } from '../../interface/user-admin-grpc.interface';
 import { mapUserToUserData } from '../../transformer/user.transformer';
 import { RESPONSE_MESSAGES } from '../../common/constants/user-messages';
@@ -140,31 +143,100 @@ export class UserAdminService {
     }
   }
 
+    // ✅ Full Text Search API
+  // async searchUsers(request: SearchUsersRequest): Promise<SearchUsersResponse> {
+  //   try {
+  //     const searchConditions = {
+
+  //       $or: [
+  //         { name: { $regex: request.query, $options: 'i' } },
+  //         { email: { $regex: request.query, $options: 'i' } },
+  //         { phoneNumber: { $regex: request.query, $options: 'i' } },
+  //       ],
+  //     };
+
+  //     const users = await this.userAdminDao.searchUsers(searchConditions, request.limit);
+  //     return {
+  //       users: users.map(mapUserToUserData),
+  //       success: true,
+  //       message: RESPONSE_MESSAGES.USER_FETCHED,
+  //     };
+  //   } catch (error) {
+  //     logger.error(`Error during user search: ${error.message}`);
+  //     return {
+  //       users: [],
+  //       success: false,
+  //       message: RESPONSE_MESSAGES.ERROR_FETCHING_USERS,
+  //     };
+  //   }
+  // }
+
   async searchUsers(request: SearchUsersRequest): Promise<SearchUsersResponse> {
-    const { query = '', limit = 10, status } = request;
     try {
-      const searchConditions = [
-        { name: { $regex: query, $options: 'i' } },
-        { email: { $regex: query, $options: 'i' } },
-        { phoneNumber: { $regex: query, $options: 'i' } },
-      ];
+      // Validate page and limit
+      // const limit = Math.max(1, Math.min(request.limit, 100)); // Limit between 1 and 100
+      // const page = Math.max(1, request.page); // Page at least 1
+    //       const page = Number(request.page) || 1;
+    // const limit = Number(request.limit) || 10;
+     // const skip = (page - 1) * limit; // Calculate skip for pagination
 
-      const finalQuery: any = { $or: searchConditions };
-      if (status !== undefined) finalQuery.isActive = status === 'active';
+      const searchConditions = {
+        $or: [
+          { name: { $regex: request.query, $options: 'i' } },
+          { email: { $regex: request.query, $options: 'i' } },
+          { phoneNumber: { $regex: request.query, $options: 'i' } },
+        ],
+      };
 
-      const users = await this.userAdminDao.searchUsers(finalQuery, limit);
-
+      const users = await this.userAdminDao.searchUsers(searchConditions,);
       return {
         users: users.map(mapUserToUserData),
-        total: users.length,
         success: true,
+        message: RESPONSE_MESSAGES.USER_FETCHED,
       };
     } catch (error) {
-      logger.error(`Error searching users with query "${query}": ${error.message}`);
+      logger.error(`Error during user search: ${error.message}`);
       return {
         users: [],
-        total: 0,
         success: false,
+        message: RESPONSE_MESSAGES.ERROR_FETCHING_USERS,
+      };
+    }
+}
+
+   async getUsersByStatus(request: GetUsersByStatusRequest): Promise<GetUsersByStatusResponse> {
+    try {
+      const users = await this.userAdminDao.findByStatus(request.status);
+      return {
+        users: users.map(mapUserToUserData),
+        success: true,
+        message: RESPONSE_MESSAGES.USER_FETCHED,
+      };
+    } catch (error) {
+      logger.error(`Error fetching users by status: ${error.message}`);
+      return {
+        users: [],
+        success: false,
+        message: RESPONSE_MESSAGES.ERROR_FETCHING_USERS,
+      };
+    }
+  }
+
+  // ✅ Fetch all users without pagination
+  async getAllUsersWithoutPagination(): Promise<GetAllUsersWithoutPaginationResponse> {
+    try {
+      const users = await this.userAdminDao.findAllWithoutPagination();
+      return {
+        users: users.map(mapUserToUserData),
+        success: true,
+        message: RESPONSE_MESSAGES.USER_FETCHED,
+      };
+    } catch (error) {
+      logger.error(`Error fetching all users: ${error.message}`);
+      return {
+        users: [],
+        success: false,
+        message: RESPONSE_MESSAGES.ERROR_FETCHING_USERS,
       };
     }
   }

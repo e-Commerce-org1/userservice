@@ -65,5 +65,6 @@ export const RESPONSE_MESSAGES = {
   USER_NOT_BLOCKED: 'User is not blocked',
   USER_UNBLOCKED_SUCCESSFULLY: 'User unblocked successfully',
   ERROR_UNBLOCKING_USER: 'Error unblocking user',
+  // USER_FETCHED: 'User fetched successfully',
 };
 

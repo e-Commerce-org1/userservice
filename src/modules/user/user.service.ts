@@ -383,33 +383,6 @@ refreshToken: string,
     }
   }
 
-  async resendVerificationEmail(email: string): Promise<ApiResponse> {
-    try{
-    const user= await this.userDao.findUserByEmail(email);
-    if (!user) {  
-      logger.warn(`Resend verification failed: User not found - ${email}`);
-      throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND); 
-    }
-
-    if (user.isVerified) {
-      logger.warn(`Resend verification failed: User already verified - ${email}`);
-      throw new BadRequestException(RESPONSE_MESSAGES.USER_ALREADY_VERIFIED);
-    }
-
-    const verificationToken = generateOTP();
-    await Promise.all([
-      this.redisService.set(`verification:${user._id}`, verificationToken, 60 * 60),
-      this.emailService.sendVerificationEmail(email, verificationToken),
-    ]);
-
-    logger.info(`Verification email resent to: ${email}`);
-    return ResponseHelper.success(RESPONSE_MESSAGES.VERIFICATION_EMAIL_SENT);
-  }
-    catch (error) {
-      logger.error(`Resend verification email error: ${error.message}`);
-      throw CustomException.internalServererror(RESPONSE_MESSAGES.EMAIL_VERIFICATION_FAILED);
-    }
-  } 
 async addAddress(
   userId: string,
   dto: CreateAddressDto,

@@ -10,6 +10,10 @@ import {
   UpdateUserStatusResponse,
   SearchUsersRequest,
   SearchUsersResponse,
+  GetUsersByStatusRequest,
+  GetUsersByStatusResponse,
+  GetAllUsersWithoutPaginationRequest,
+  GetAllUsersWithoutPaginationResponse,
 } from '../../interface/user-admin-grpc.interface';
 import { GrpcExceptionFilter } from '../../common/filters/grpc-exception.filter';
 import { grpcMethods, grpcService } from '../../common/constants/admin.constant';
@@ -72,5 +76,26 @@ export class UserAdminController {
       throw new Error(`Error searching users: ${error.message}`);
     }
     
+  }
+
+  @GrpcMethod(grpcService , grpcMethods.getByStatus)
+  getUsersByStatus(
+    data: GetUsersByStatusRequest,
+  ): Promise<GetUsersByStatusResponse> {
+    try {
+      return this.userAdminService.getUsersByStatus(data);
+    } catch (error) {
+      throw new Error(`Error fetching users by status: ${error.message}`);
+    }
+  }
+  @GrpcMethod(grpcService , grpcMethods.getAllWithoutPagination)
+  getUsersByRole(
+    data: GetAllUsersWithoutPaginationRequest,
+  ): Promise<GetAllUsersWithoutPaginationResponse > {
+    try {
+      return this.userAdminService.getAllUsersWithoutPagination();
+    } catch (error) {
+      throw new Error(`Error fetching users by role: ${error.message}`);
+    }
   }
 }

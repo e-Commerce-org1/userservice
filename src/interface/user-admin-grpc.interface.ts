@@ -34,14 +34,28 @@ export interface UpdateUserStatusResponse {
 
 export interface SearchUsersRequest {
   query: string;
-  status: 'active' | 'inactive' | 'block',
-  limit: number;
+  // page: number;
+  // limit: number;
 }
 
 export interface SearchUsersResponse {
   users: UserData[];
-  total: number;
   success: boolean;
+  message: string;
+}
+export interface GetUsersByStatusRequest {
+  status: 'active' | 'inactive' | 'block';
+}
+export interface GetUsersByStatusResponse {
+  users: UserData[];
+  success: boolean;
+  message: string;
+}
+export interface GetAllUsersWithoutPaginationRequest {}
+export interface GetAllUsersWithoutPaginationResponse {
+  users: UserData[];
+  success: boolean;
+  message: string;
 }
 
 export interface UnblockUserRequest {

@@ -31,6 +31,7 @@ import { AuthGuard } from '../../middleware/auth.guard';
 import { logger } from '../../common/logger';
 import { CustomException } from '../../common/exceptions/user.exceptions';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -85,29 +86,6 @@ export class UserController {
       return result;
     } catch (error) {
       logger.error(`Email verification failed for user: ${verifyEmailDto.userId} - ${error.message}`);
-      throw error;
-    }
-  }
-
-  @Post('resend-verification')
-  @HttpCode(HTTP_STATUS.OK)
-  @ApiOperation({ summary: 'Resend verification email' })
-  @ApiResponse({
-    status: HTTP_STATUS.OK,
-    description: RESPONSE_MESSAGES.VERIFICATION_EMAIL_SENT,
-  })
-  async resendVerification(@Body('email') email: string) {
-    try {
-      if (!email) {
-        throw CustomException.badRequest(RESPONSE_MESSAGES.FILL_EMAIL);
-      }
-      
-      logger.info(`Resend verification attempt for email: ${email}`);
-      const result = await this.userService.resendVerificationEmail(email);
-      logger.info(`Resend verification successful for email: ${email}`);
-      return result;
-    } catch (error) {
-      logger.error(`Resend verification failed for email: ${email} - ${error.message}`);
       throw error;
     }
   }
@@ -255,7 +233,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   @Patch('change-password')
   @HttpCode(HTTP_STATUS.OK)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Change password (authenticated)' })
   @ApiResponse({
     status: HTTP_STATUS.OK,
@@ -298,14 +276,9 @@ export class UserController {
     status: HTTP_STATUS.UNAUTHORIZED,
     description: RESPONSE_MESSAGES.INVALID_RESET_TOKEN,
   })
-  async refreshToken(@Request() req, @Body() body: { refreshToken: string }) {
+  async refreshToken(@Request() req, @Body() refreshTokenDto:RefreshTokenDto) {
     try {
-      if (!body.refreshToken) {
-        throw CustomException.badRequest(RESPONSE_MESSAGES.REFRESH_TOKEN_REQUIRE);
-      }
-      
-      logger.info(`Token refresh attempt for user: ${req.user?.userId}`);
-      const result = await this.userService.refreshTokens(body.refreshToken);
+      const result = await this.userService.refreshTokens(refreshTokenDto.refreshToken);
       logger.info(`Token refresh successful for user: ${req.user?.userId}`);
       return result;
     } catch (error) {
@@ -316,7 +289,7 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Post('address')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Add address (authenticated)' })
   @ApiResponse({
     status: HTTP_STATUS.CREATED,
@@ -340,7 +313,7 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Get('addresses')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user addresses (authenticated)' })
   @ApiResponse({
     status: HTTP_STATUS.OK,
@@ -364,7 +337,7 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Put('address/:addressId')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update address by ID (authenticated)' })
   @ApiParam({ name: 'addressId', required: true, description: 'The ID of the address to update' })
   @ApiResponse({
@@ -401,7 +374,7 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Delete('address/:addressId')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete address by ID (authenticated)' })
   @ApiParam({ name: 'addressId', required: true, description: 'The ID of the address to delete' })
   @ApiResponse({
@@ -434,7 +407,7 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Get('profile')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user profile (authenticated)' })
   @ApiResponse({
     status: HTTP_STATUS.OK,
@@ -463,7 +436,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   @Patch('edit-profile')
   @HttpCode(HTTP_STATUS.OK)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Edit user profile (authenticated)' })
   @ApiResponse({
     status: HTTP_STATUS.OK,
@@ -491,7 +464,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   @Post('logout')
   @HttpCode(HTTP_STATUS.OK)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'User logout (authenticated)' })
   @ApiResponse({
     status: HTTP_STATUS.OK,

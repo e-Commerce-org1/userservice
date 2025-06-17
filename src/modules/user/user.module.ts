@@ -34,17 +34,6 @@ import { User, UserSchema } from 'src/schema/user.schema';
     MongooseModule.forFeature([
           { name: User.name, schema: UserSchema },
         ]),
-    // MongooseModule.forRootAsync({
-    //   imports: [ConfigModule],
-    //   useFactory: (configService: ConfigService) => ({
-    //     uri: configService.get<string>('MONGO_URI'),
-    //   }),
-    //   inject: [ConfigService],
-    // }),
-
-    // MongooseModule.forFeature([
-    //   { name: User.name, schema: UserSchema },
-    // ]),
     EmailModule,
     RedisModule,
   ],

@@ -15,6 +15,10 @@ export const grpcMethods = {
 
     search: 'SearchUsers',
 
+    getByStatus: 'GetUsersByStatus',
+
+    getAllWithoutPagination: 'GetAllUsersWithoutPagination',
+
     AddAddress: 'AddAddress',
 
     GetUserAddresses: 'GetUserAddresses',

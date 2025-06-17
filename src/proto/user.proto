@@ -9,6 +9,8 @@ service UserAdminGrpcService {
   rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse);
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+  rpc GetUsersByStatus(GetUsersByStatusRequest) returns (GetUsersByStatusResponse);
+  rpc GetAllUsersWithoutPagination(GetAllUsersWithoutPaginationRequest) returns (GetAllUsersWithoutPaginationResponse);
   rpc AddAddress (AddAddressRequest) returns (AddAddressResponse); 
   rpc GetUserAddresses (GetUserAddressesRequest) returns (GetUserAddressesResponse);
   rpc UpdateAddress (UpdateAddressRequest) returns (UpdateAddressResponse);
@@ -70,14 +72,27 @@ message DeleteUserResponse {
 
 message SearchUsersRequest {
   string query = 1;
-  string status = 2;
-  int32 limit = 3;
 }
 
 message SearchUsersResponse {
   repeated UserData users = 1;
-  int32 total = 2;
-  bool success = 3;
+  bool success = 2;
+  string message = 3;
+}
+
+message GetUsersByStatusRequest {
+  string status=1;
+}
+message GetUsersByStatusResponse {
+  repeated UserData users = 1;
+  bool success=2;
+  string message=3;
+}
+message GetAllUsersWithoutPaginationRequest {}
+message GetAllUsersWithoutPaginationResponse {
+ repeated UserData users = 1;
+  bool success=2;
+  string message=3;
 }
 
 message UserData {
