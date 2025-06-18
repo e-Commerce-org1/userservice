@@ -14,7 +14,9 @@ import { User, UserSchema } from 'src/schema/user.schema';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal:true,
+    }),
     ClientsModule.registerAsync([
       {
         name: 'AUTH_SERVICE',

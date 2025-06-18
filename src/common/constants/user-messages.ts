@@ -6,6 +6,7 @@ export const RESPONSE_MESSAGES = {
   EMAIL_VERIFIED_SUCCESS: 'Email verified successfully',
   VERIFICATION_EMAIL_SENT: 'Verification email sent successfully',
   LOGIN_SUCCESS: 'User logged in successfully',
+  LOGIN_FAILED:'User logged in failed',
   LOGOUT_SUCCESS: 'User logged out successfully',
   PASSWORD_CHANGED_SUCCESS: 'Password changed successfully',
   PASSWORD_RESET_OTP_SENT: 'Password reset OTP sent to your email',
@@ -14,6 +15,8 @@ export const RESPONSE_MESSAGES = {
 
   // User Profile Messages
   PROFILE_RETRIEVED_SUCCESS: 'User profile retrieved successfully',
+  PROFILE_RETRIEVED_FAILED: 'User profile retrieved failed',
+
 
   // Address Messages
   ADDRESS_ADDED_SUCCESS: 'Address added successfully',
@@ -62,6 +65,7 @@ export const RESPONSE_MESSAGES = {
   PASSWORD_SAME_AS_OLD: 'New password cannot be the same as the old password',
   PASSWORD_SAME_AS_CURRENT: 'New password cannot be the same as the current password',
   PROFILE_UPDATED_SUCCESS: 'Profile updated successfully',
+  PROFILE_UPDATED_FAILED: 'Profile updated failed',
   USER_NOT_BLOCKED: 'User is not blocked',
   USER_UNBLOCKED_SUCCESSFULLY: 'User unblocked successfully',
   ERROR_UNBLOCKING_USER: 'Error unblocking user',

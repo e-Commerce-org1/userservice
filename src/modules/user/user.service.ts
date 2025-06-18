@@ -1,8 +1,6 @@
 import {
   Injectable,
-  ConflictException,
   NotFoundException,
-  UnauthorizedException,
   InternalServerErrorException,
   BadRequestException,
   Inject,
@@ -22,13 +20,15 @@ import { logger } from '../../common/logger';
 import { EmailService } from '../../provider/email/email.service';
 import { RedisService } from '../../provider/redis/redis.service';
 import { ClientGrpc } from '@nestjs/microservices';
-import { Observable, lastValueFrom } from 'rxjs';
+import {  lastValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 import { generateOTP } from '../../utils/generateOtp';
 import { generateResetToken } from '../../utils/gen-reset-token';
 import { AuthServiceGrpc } from '../../interface/user.interface';
 import {CustomException} from '../../common/exceptions/user.exceptions'
 import { UserDao } from './dao/user.dao';
+import { LOGGER_MESSAGES } from 'src/common/constants/logger.constants';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -40,6 +40,7 @@ export class UserService implements OnModuleInit {
     @Inject('AUTH_SERVICE') private readonly client: ClientGrpc,
     private emailService: EmailService,
     private redisService: RedisService,
+    private configService: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -49,12 +50,13 @@ export class UserService implements OnModuleInit {
   async signup(dto: CreateUserDto): Promise<ApiResponse<{ userId: string }>> {
     const existingUser = await this.userDao.findUserByEmail(dto.email);
     if (existingUser) {
-      logger.warn(`Signup failed: User already exists - ${dto.email}`);
+      logger.warn(LOGGER_MESSAGES.SIGNUP_FAILED.replace('{email}', dto.email));
       throw CustomException.conflict(RESPONSE_MESSAGES.EMAIL_ALREADY_EXISTS);
 
     }
+    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS','10'));
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
     const userId = new this.userModel()._id.toString();
     const verificationToken = generateOTP();
     
@@ -70,10 +72,10 @@ export class UserService implements OnModuleInit {
         this.emailService.sendVerificationEmail(dto.email, verificationToken),
         this.redisService.set(`verification:${userId}`, verificationToken, 60 * 60),
       ]);
-      logger.info(`User signup initiated and verification email sent: ${dto.email}`);
+      logger.info(LOGGER_MESSAGES.SIGNUP_INITIATED.replace('{email}', dto.email));
       return ResponseHelper.created(RESPONSE_MESSAGES.USER_REGISTERED_SUCCESS, { userId });
     } catch (error) {
-      logger.error(`Signup error: ${error.message}`);
+      logger.error(LOGGER_MESSAGES.SIGNUP_ERROR.replace('{error}', error.message));
       throw CustomException.internalServererror(RESPONSE_MESSAGES.SIGNUP_FAILED);
     }
   }
@@ -82,17 +84,17 @@ async verifyEmail(userId: string, token: string): Promise<ApiResponse> {
   try {
     const storedToken = await this.redisService.get(`verification:${userId}`);
     if (!storedToken) {
-      logger.warn(`Email verification failed: Token expired for user ${userId}`);
+      logger.warn(LOGGER_MESSAGES.EMAIL_VERIFICATION_FAILED_TOKEN.replace('{userId}', userId));
       throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_VERIFICATION_TOKEN);
     }
     if (storedToken !== token) {
-      logger.warn(`Email verification failed: Invalid token for user ${userId}`);
+      logger.warn(LOGGER_MESSAGES.EMAIL_VERIFICATION_FAILED_INVALID.replace('{userId}', userId));
       throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_VERIFICATION_TOKEN);
     }
 
     const userDataString = await this.redisService.get(`pending_user:${userId}`);
     if (!userDataString) {
-      logger.warn(`Email verification failed: User data not found - ${userId}`);
+      logger.warn(LOGGER_MESSAGES.EMAIL_VERIFICATION_FAILED_NOT_FOUND.replace('{userId}', userId));
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
 
@@ -104,7 +106,7 @@ async verifyEmail(userId: string, token: string): Promise<ApiResponse> {
 
     const savedUser = await createdUser.save();
     if (!savedUser) {
-      logger.warn(`Email verification failed: Failed to save user - ${userId}`);
+      logger.warn(LOGGER_MESSAGES.EMAIL_VERIFICATION_FAILED_SAVE.replace('{userId}', userId));
       throw CustomException.internalServererror(RESPONSE_MESSAGES.EMAIL_VERIFICATION_FAILED);
     }
 
@@ -112,10 +114,10 @@ async verifyEmail(userId: string, token: string): Promise<ApiResponse> {
       this.redisService.del(`pending_user:${userId}`),
       this.redisService.del(`verification:${userId}`),
     ]);
-    logger.info(`Email verified and user saved for: ${userId}`);
+    logger.info(LOGGER_MESSAGES.EMAIL_VERIFIED.replace('{userId}', userId));
     return ResponseHelper.success(RESPONSE_MESSAGES.EMAIL_VERIFIED_SUCCESS);
   } catch (error) {
-    logger.error(`Email verification error: ${error.message}`);
+    logger.error(LOGGER_MESSAGES.EMAIL_VERIFICATION_ERROR.replace('{error}', error.message));
     throw CustomException.internalServererror(RESPONSE_MESSAGES.EMAIL_VERIFICATION_FAILED);
   }
 }
@@ -127,15 +129,15 @@ async verifyEmail(userId: string, token: string): Promise<ApiResponse> {
   > {
     const user = await this.userDao.findUserByEmail(dto.email);
     if (!user || !(await bcrypt.compare(dto.password, user.password))) {
-      logger.warn(`Login failed for: ${dto.email}`);
-      throw CustomException.unauthorized(RESPONSE_MESSAGES.INVALID_CREDENTIALS);
+      logger.warn(LOGGER_MESSAGES.LOGIN_FAILED.replace('{email}', dto.email));
+      throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_CREDENTIALS);
     }
     if (!user.isVerified) {
-      logger.warn(`Login failed: User not verified - ${dto.email}`);
+      logger.warn(LOGGER_MESSAGES.LOGIN_NOT_VERIFIED.replace('{email}', dto.email));
       throw CustomException.unauthorized(RESPONSE_MESSAGES.EMAIL_NOT_VERIFIED);
     }
     if(user.isActive=='block'){
-      logger.warn(`Login failed: User not verified - ${dto.email}`);
+      logger.warn(LOGGER_MESSAGES.LOGIN_BLOCKED.replace('{email}', dto.email));
       throw CustomException.unauthorized(RESPONSE_MESSAGES.USER_BLOCKED);
     }
     try {
@@ -150,7 +152,7 @@ async verifyEmail(userId: string, token: string): Promise<ApiResponse> {
       );
       await this.userDao.updateUserActiveStatus(user._id.toString(), 'active');
       await this.userDao.updateUserDeviceId(user._id.toString(), deviceId);
-      logger.info(`User logged in: ${dto.email}`);
+      logger.info(LOGGER_MESSAGES.LOGIN_SUCCESS.replace('{email}', dto.email));
       return ResponseHelper.success(RESPONSE_MESSAGES.LOGIN_SUCCESS, {
         user: {
           _id: user._id,
@@ -163,8 +165,8 @@ async verifyEmail(userId: string, token: string): Promise<ApiResponse> {
         tokens,
       });
     } catch (error) {
-      logger.error(`Login error during token generation: ${error.message}`);
-      throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_CREDENTIALS);
+      logger.error(LOGGER_MESSAGES.LOGIN_TOKEN_ERROR.replace('{error}', error.message));
+      throw CustomException.internalServererror(RESPONSE_MESSAGES.INVALID_CREDENTIALS);
     }
   }
 
@@ -220,8 +222,8 @@ refreshToken: string,
         accessToken: response.accessToken,
       });
     } catch (error) {
-      logger.error(`Token refresh error: ${error.message}`);
-      throw CustomException.unauthorized(RESPONSE_MESSAGES.INVALID_RESET_TOKEN);
+      logger.error(LOGGER_MESSAGES.TOKEN_REFRESH_ERROR.replace('{error}', error.message));
+      throw CustomException.internalServererror(RESPONSE_MESSAGES.INVALID_RESET_TOKEN);
     }
   }
 
@@ -238,8 +240,8 @@ refreshToken: string,
       console.log(response);
       return response;
     } catch (error) {
-      logger.error(`Token validation error: ${error.message}`);
-      throw CustomException.unauthorized(RESPONSE_MESSAGES.INVALID_TOKEN);
+      logger.error(LOGGER_MESSAGES.TOKEN_VALIDATION_ERROR.replace('{error}', error.message));
+      throw CustomException.internalServererror(RESPONSE_MESSAGES.INVALID_TOKEN);
     }
   }
 
@@ -251,38 +253,39 @@ refreshToken: string,
     try{
       const user = await this.userDao.findUserById(userId);
     if (!user) {
-      logger.warn(`Password change failed: User not found - ${userId}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_CHANGE_NOT_FOUND.replace('{userId}', userId));
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
     if (newPassword.length < 8) {
-      logger.warn(`Password change failed: Password too short for user ${userId}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_CHANGE_TOO_SHORT.replace('{userId}', userId));
       throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_TOO_SHORT);
     }
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      logger.warn(`Password change failed: Incorrect old password for user ${userId}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_CHANGE_INCORRECT.replace('{userId}', userId));
       throw CustomException.unauthorized(RESPONSE_MESSAGES.INCORRECT_OLD_PASSWORD);
     }
     if (oldPassword === newPassword) {
-      logger.warn(`Password change failed: New password cannot be the same as old password for user ${userId}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_CHANGE_SAME_OLD.replace('{userId}', userId));
       throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_SAME_AS_OLD);
     }
     if (newPassword === user.password) {
-      logger.warn(`Password change failed: New password cannot be the same as current password for user ${userId}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_CHANGE_SAME_CURRENT.replace('{userId}', userId));
       throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_SAME_AS_CURRENT);
     }
     if (newPassword.length < 8) {
-      logger.warn(`Password change failed: New password too short for user ${userId}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_CHANGE_SAME_CURRENT.replace('{userId}', userId));
       throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_TOO_SHORT);
     }
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS','10'));
+    const hashed = await bcrypt.hash(newPassword,saltRounds );
     await this.userDao.updateUserPassword(userId, hashed);
-    logger.info(`Password changed for userId: ${userId}`);
+    logger.info(LOGGER_MESSAGES.PASSWORD_CHANGED.replace('{userId}', userId));
 
     return ResponseHelper.success(RESPONSE_MESSAGES.PASSWORD_CHANGED_SUCCESS);
     }
     catch (error) {
-      logger.error(`Password change error: ${error.message}`);
+      logger.error(LOGGER_MESSAGES.PASSWORD_CHANGE_ERROR.replace('{error}', error.message));
       throw CustomException.internalServererror(RESPONSE_MESSAGES.PASSWORD_CHANGE_FAILED);
     }
   }
@@ -291,7 +294,7 @@ refreshToken: string,
     try{
       const user = await this.userDao.findUserByEmail(email);
     if (!user) {
-      logger.warn(`Password reset initiation failed: User not found - ${email}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_RESET_NOT_FOUND.replace('{email}', email));
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
 
@@ -301,11 +304,11 @@ refreshToken: string,
       this.emailService.sendPasswordResetOTP(email, otp),
     ])
 
-    logger.info(`Password reset OTP sent to: ${email}`);
+    logger.info(LOGGER_MESSAGES.PASSWORD_RESET_OTP_SENT.replace('{email}', email));
     return ResponseHelper.success(RESPONSE_MESSAGES.PASSWORD_RESET_OTP_SENT);
     }
     catch(error) {
-      logger.error(`Password reset initiation error: ${error.message}`);
+      logger.error(LOGGER_MESSAGES.PASSWORD_RESET_INIT_ERROR.replace('{error}', error.message));
       throw CustomException.internalServererror(RESPONSE_MESSAGES.PASSWORD_RESET_FAILED);
     }
   }
@@ -317,16 +320,16 @@ refreshToken: string,
     try{
       const user = await this.userDao.findUserByEmail(email);
     if (!user) {
-      logger.warn(`OTP verification failed: User not found - ${email}`);
+      logger.warn(LOGGER_MESSAGES.OTP_VERIFICATION_NOT_FOUND.replace('{email}', email));
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
     const storedOTP = await this.redisService.get(`password-reset:${user._id}`);
     if (storedOTP !== otp) {
-      logger.warn(`OTP verification failed for user: ${email}`);
+      logger.warn(LOGGER_MESSAGES.OTP_VERIFICATION_FAILED.replace('{email}', email));
       throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_OTP);
     }
     if(!storedOTP ){
-      logger.warn(`OTP verification failed: OTP is expired for user ${email}`);
+      logger.warn(LOGGER_MESSAGES.OTP_VERIFICATION_EXPIRED.replace('{email}', email));
       throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_OTP);
     }
 
@@ -336,11 +339,11 @@ refreshToken: string,
       this.redisService.del(`password-reset:${user._id}`),
     ]);
 
-    logger.info(`OTP verified for password reset: ${email}`);
+    logger.info(LOGGER_MESSAGES.OTP_VERIFIED.replace('{email}', email));
     return ResponseHelper.success(RESPONSE_MESSAGES.OTP_VERIFIED_SUCCESS, { resetToken });
     }
     catch (error) {
-      logger.error(`OTP verification error: ${error.message}`);
+      logger.error(LOGGER_MESSAGES.OTP_VERIFICATION_ERROR.replace('{error}', error.message));
       throw CustomException.internalServererror(RESPONSE_MESSAGES.OTP_VERIFICATION_FAILED);
     }
   }
@@ -353,32 +356,33 @@ refreshToken: string,
     try{
       const user = await this.userDao.findUserByEmail(email);
     if (!user) {
-      logger.warn(`Password reset failed: User not found - ${email}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_RESET_FAILED_NOT_FOUND.replace('{email}', email));
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
     const storedResetToken = await this.redisService.get(`reset-token:${user._id}`);
     if ( storedResetToken !== resetToken) {
-      logger.warn(`Password reset failed: Invalid reset token for user ${email}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_RESET_INVALID_TOKEN.replace('{email}', email));
       throw new BadRequestException(RESPONSE_MESSAGES.INVALID_RESET_TOKEN);
     }
     if(!storedResetToken){
-      logger.warn(`Password reset failed: Reset token is expired for user ${email}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_RESET_TOKEN_EXPIRED.replace('{email}', email));
       throw CustomException.badRequest(RESPONSE_MESSAGES.INVALID_RESET_TOKEN);
     }
     if (newPassword.length < 8) {
-      logger.warn(`Password reset failed: Password too short for user ${email}`);
+      logger.warn(LOGGER_MESSAGES.PASSWORD_RESET_TOO_SHORT.replace('{email}', email));
       throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_TOO_SHORT);
     }
+    const saltRounds = parseInt(this.configService.get<string>('BCRYPT_SALT_ROUNDS','10'));
 
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, saltRounds );
     await this.userModel.findByIdAndUpdate(user._id, { password: hashed });
     await this.redisService.del(`reset-token:${user._id}`);
 
-    logger.info(`Password reset completed for email: ${email}`);
+    logger.info(LOGGER_MESSAGES.PASSWORD_RESET_COMPLETED.replace('{email}', email));
     return ResponseHelper.success(RESPONSE_MESSAGES.PASSWORD_RESET_SUCCESS);
     }
     catch (error) {
-      logger.error(`Password reset error: ${error.message}`);
+      logger.error(LOGGER_MESSAGES.PASSWORD_RESET_ERROR.replace('{error}', error.message));
       throw CustomException.internalServererror(RESPONSE_MESSAGES.PASSWORD_RESET_FAILED);
     }
   }
@@ -390,7 +394,7 @@ async addAddress(
   try{
   const user = await this.userDao.findUserById(userId);
   if (!user) {
-    logger.warn(`Add address failed: User not found - ${userId}`);
+    logger.warn(LOGGER_MESSAGES.ADD_ADDRESS_NOT_FOUND.replace('{userId}', userId));
     throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND); 
   }
   if (dto.isDefault) {
@@ -400,13 +404,13 @@ async addAddress(
   user.addresses.push(dto);
   await user.save();
 
-  logger.info(`Address added for userId: ${userId}`);
+  logger.info(LOGGER_MESSAGES.ADD_ADDRESS_SUCCESS.replace('{userId}', userId));
   return ResponseHelper.created(RESPONSE_MESSAGES.ADDRESS_ADDED_SUCCESS, {
     addresses: user.addresses,
   });
 }
 catch (error) {
-  logger.error(`Add address error: ${error.message}`);
+  logger.error(LOGGER_MESSAGES.ADD_ADDRESS_ERROR.replace('{error}', error.message));
   throw CustomException.internalServererror(RESPONSE_MESSAGES.ADDRESS_CREATION_FAILED);
 }     
 }
@@ -415,15 +419,15 @@ async getUserAddresses(userId: string): Promise<ApiResponse<UserDocument['addres
   try{
   const user= await this.userDao.findUserById(userId);
   if (!user) {   
-    logger.warn(`Get addresses failed: User not found - ${userId}`);
+    logger.warn(LOGGER_MESSAGES.GET_ADDRESS_NOT_FOUND.replace('{userId}', userId));
     throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
   }
 
-  logger.info(`Fetched addresses for userId: ${userId}`);
+  logger.info(LOGGER_MESSAGES.GET_ADDRESS_SUCCESS.replace('{userId}', userId));
   return ResponseHelper.success(RESPONSE_MESSAGES.ADDRESSES_RETRIEVED_SUCCESS, user.addresses);
 }
 catch (error) {
-  logger.error(`Get addresses error: ${error.message}`);    
+  logger.error(LOGGER_MESSAGES.GET_ADDRESS_ERROR.replace('{error}', error.message));    
   throw CustomException.internalServererror(RESPONSE_MESSAGES.ADDRESSES_RETRIEVAL_FAILED);
 }
 }
@@ -436,11 +440,9 @@ async updateAddress(
   try {
     const user = await this.userDao.findUserById(userId);
     if (!user) {
-      logger.warn(`Update address failed: User not found - ${userId}`);
+      logger.warn(LOGGER_MESSAGES.UPDATE_ADDRESS_NOT_FOUND.replace('{userId}', userId));
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
-
-    // If isDefault is true, reset all isDefault values to false first
     if (dto.isDefault) {
       await this.userModel.updateOne(
         { _id: userId },
@@ -458,29 +460,27 @@ async updateAddress(
     );
 
     if (updateResult.modifiedCount === 0) {
-      logger.warn(`Update address failed: Address not found - ${addressId}`);
+      logger.warn(LOGGER_MESSAGES.UPDATE_ADDRESS_NOT_FOUND_ADDRESS.replace('{addressId}', addressId));
       throw CustomException.notFound(RESPONSE_MESSAGES.ADDRESS_NOT_FOUND);
     }
-
-    // Fetch the updated address (optional but useful for response)
     const updatedUser = await this.userDao.findUserById(userId);
     if (!updatedUser) {
-      logger.warn(`Update address failed: User not found after update - ${userId}`);
+      logger.warn(LOGGER_MESSAGES.UPDATE_ADDRESS_NOT_FOUND_AFTER.replace('{userId}', userId));
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
     const updatedAddress = updatedUser.addresses.find((addr) => addr._id?.toString() === addressId);
 
     if (!updatedAddress) {
-      logger.warn(`Update address failed: Address not found after update - ${addressId}`);
+      logger.warn(LOGGER_MESSAGES.UPDATE_ADDRESS_NOT_FOUND_ADDRESS_AFTER.replace('{addressId}', addressId));
       throw CustomException.notFound(RESPONSE_MESSAGES.ADDRESS_NOT_FOUND);
     }
 
-    logger.info(`Address updated for userId: ${userId}, addressId: ${addressId}`);
+    logger.info( LOGGER_MESSAGES.UPDATE_ADDRESS_SUCCESS.replace('{userId}', userId).replace('{addressId}', addressId),);
     return ResponseHelper.success(RESPONSE_MESSAGES.ADDRESS_UPDATED_SUCCESS, {
       address: updatedAddress,
     });
   } catch (error) {
-    logger.error(`update address error: ${error.message}`);
+    logger.error(LOGGER_MESSAGES.UPDATE_ADDRESS_ERROR.replace('{error}', error.message));
     throw CustomException.internalServererror(RESPONSE_MESSAGES.ADDRESSES_RETRIEVAL_FAILED);
   }
 }
@@ -489,55 +489,65 @@ async deleteAddress(userId: string, addressId: string): Promise<ApiResponse<null
   try{
     const user = await this.userDao.findUserById(userId);
   if (!user) {
-    logger.warn(`Delete address failed: User not found - ${userId}`);
+   logger.warn(LOGGER_MESSAGES.DELETE_ADDRESS_NOT_FOUND.replace('{userId}', userId));
     throw new NotFoundException(RESPONSE_MESSAGES.USER_NOT_FOUND);
   }
 
   const addressIndex = user.addresses.findIndex((addr) => addr._id?.toString() === addressId);
   if (addressIndex === -1) {
-    logger.warn(`Delete address failed: Address not found - ${addressId}`);
+    logger.warn(LOGGER_MESSAGES.DELETE_ADDRESS_NOT_FOUND_ADDRESS.replace('{addressId}', addressId));
     throw new NotFoundException(RESPONSE_MESSAGES.ADDRESS_NOT_FOUND);
   }
 
   user.addresses.splice(addressIndex, 1);
   await user.save();
 
-  logger.info(`Address deleted for userId: ${userId}, addressId: ${addressId}`);
+  logger.info(LOGGER_MESSAGES.DELETE_ADDRESS_SUCCESS.replace('{userId}', userId).replace('{addressId}', addressId),);
   return ResponseHelper.success(RESPONSE_MESSAGES.ADDRESS_DELETED_SUCCESS, null);
   }
   catch(error){
-    logger.error(`delete address error: ${error.message}`);
+    logger.error(LOGGER_MESSAGES.DELETE_ADDRESS_ERROR.replace('{error}', error.message));
     throw CustomException.internalServererror(RESPONSE_MESSAGES.ADDRESS_DELETED_FAILED)
   }
 }
 
   async getProfile(userId: string): Promise<ApiResponse<UserDocument>> {
-    const user = await this.userDao.findUserByIdWithoutPassword(userId);
+    try{
+      const user = await this.userDao.findUserByIdWithoutPassword(userId);
     if (!user) {
-      logger.warn(`Get user failed: User not found - ${userId}`);
+      logger.warn(LOGGER_MESSAGES.GET_PROFILE_NOT_FOUND.replace('{userId}', userId));
       throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
 
-    logger.info(`Fetched user by ID: ${userId}`);
+    logger.info(LOGGER_MESSAGES.GET_PROFILE_SUCCESS.replace('{userId}', userId));
     return ResponseHelper.success(RESPONSE_MESSAGES.PROFILE_RETRIEVED_SUCCESS, user);
+    }
+    catch(error){
+      throw CustomException.internalServererror(RESPONSE_MESSAGES.PROFILE_RETRIEVED_FAILED)
+    }
   }
 
 async editProfile(
   userId: string,
   updateData: { name?: string; phoneNumber?: string }
 ): Promise<ApiResponse<UserDocument>> {
-  const updatedUser = await this.userDao.findByIdAndUpdateWithoutPassword(
+  try{
+    const updatedUser = await this.userDao.findByIdAndUpdateWithoutPassword(
     userId,
     updateData
   );
 
   if (!updatedUser) {
-    logger.warn(`Edit profile failed: User not found - ${userId}`);
+    logger.warn(LOGGER_MESSAGES.EDIT_PROFILE_NOT_FOUND.replace('{userId}', userId));
     throw CustomException.notFound(RESPONSE_MESSAGES.USER_NOT_FOUND);
   }
 
-  logger.info(`Updated profile for user: ${userId}`);
+  logger.info(LOGGER_MESSAGES.EDIT_PROFILE_SUCCESS.replace('{userId}', userId));
   return ResponseHelper.success(RESPONSE_MESSAGES.PROFILE_UPDATED_SUCCESS, updatedUser);
+  }
+  catch(error){
+    throw CustomException.internalServererror(RESPONSE_MESSAGES.PROFILE_UPDATED_FAILED)
+  }
 }
 
 
@@ -553,12 +563,17 @@ async editProfile(
       throw new Error('Logout failed');
     }
     
-    logger.info(`User logged out successfully with token: ${accessToken.substring(0, 10)}...`);
+   logger.info(LOGGER_MESSAGES.LOGOUT_SUCCESS.replace('{token}', accessToken.substring(0, 10) + '...'), );
     return ResponseHelper.success(RESPONSE_MESSAGES.LOGOUT_SUCCESS, {
       success: result.success,
     });
   } catch (error) {
-    logger.error(`Logout error: ${error.message}, token: ${accessToken.substring(0, 10)}...`);
+    logger.error(
+        LOGGER_MESSAGES.LOGOUT_ERROR.replace('{error}', error.message).replace(
+          '{token}',
+          accessToken.substring(0, 10) + '...',
+        ),
+      );
     throw CustomException.internalServererror(RESPONSE_MESSAGES.LOGOUT_FAILED);
   }
 }

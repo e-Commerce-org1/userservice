@@ -10,8 +10,7 @@ import {
   Put,
   Param,
   Delete,
-  Req,
-  Inject,
+  ValidationPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -32,14 +31,12 @@ import { logger } from '../../common/logger';
 import { CustomException } from '../../common/exceptions/user.exceptions';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LOGGER_MESSAGES } from '../../common/constants/logger.constants';
 
 @ApiTags('Users')
 @Controller('users')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-    @Inject(AuthGuard) private readonly authGuard: AuthGuard,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   @Post('signup')
   @ApiOperation({ summary: 'Register a new user' })
@@ -51,14 +48,20 @@ export class UserController {
     status: HTTP_STATUS.CONFLICT,
     description: RESPONSE_MESSAGES.EMAIL_ALREADY_EXISTS,
   })
-  async signup(@Body() createUserDto: CreateUserDto) {
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.SIGNUP_FAILED,
+  })
+  async signup(@Body(ValidationPipe) createUserDto: CreateUserDto) {
     try {
-      logger.info(`Signup attempt for email: ${createUserDto.email}`);
+      logger.info(LOGGER_MESSAGES.SIGNUP_ATTEMPT.replace('{email}', createUserDto.email));
       const result = await this.userService.signup(createUserDto);
-      logger.info(`Signup successful for email: ${createUserDto.email}`);
+      logger.info(LOGGER_MESSAGES.SIGNUP_SUCCESS.replace('{email}', createUserDto.email));
       return result;
     } catch (error) {
-      logger.error(`Signup failed for email: ${createUserDto.email} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.SIGNUP_ERROR.replace('{error}', error.message).replace('{email}', createUserDto.email),
+      );
       throw error;
     }
   }
@@ -74,18 +77,27 @@ export class UserController {
     status: HTTP_STATUS.BAD_REQUEST,
     description: RESPONSE_MESSAGES.INVALID_VERIFICATION_TOKEN,
   })
-  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+  @ApiResponse({
+    status: HTTP_STATUS.NOT_FOUND,
+    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.EMAIL_VERIFICATION_FAILED,
+  })
+  async verifyEmail(@Body(ValidationPipe) verifyEmailDto: VerifyEmailDto) {
     try {
-      if (!verifyEmailDto.userId || !verifyEmailDto.token) {
-        throw CustomException.badRequest(RESPONSE_MESSAGES.DATA_REQIRED);
-      }
-      
-      logger.info(`Email verification attempt for user: ${verifyEmailDto.userId}`);
+      logger.info(LOGGER_MESSAGES.EMAIL_VERIFICATION_ATTEMPT.replace('{userId}', verifyEmailDto.userId));
       const result = await this.userService.verifyEmail(verifyEmailDto.userId, verifyEmailDto.token);
-      logger.info(`Email verification successful for user: ${verifyEmailDto.userId}`);
+      logger.info(LOGGER_MESSAGES.EMAIL_VERIFICATION_SUCCESS.replace('{userId}', verifyEmailDto.userId));
       return result;
     } catch (error) {
-      logger.error(`Email verification failed for user: ${verifyEmailDto.userId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.EMAIL_VERIFICATION_ERROR.replace('{error}', error.message).replace(
+          '{userId}',
+          verifyEmailDto.userId,
+        ),
+      );
       throw error;
     }
   }
@@ -95,21 +107,26 @@ export class UserController {
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({
     status: HTTP_STATUS.OK,
-    //type: LoginResponseDto,
     description: RESPONSE_MESSAGES.LOGIN_SUCCESS,
   })
   @ApiResponse({
     status: HTTP_STATUS.UNAUTHORIZED,
     description: RESPONSE_MESSAGES.INVALID_CREDENTIALS,
   })
-  async login(@Body() loginUserDto: LoginUserDto) {
+  @ApiResponse({
+    status: HTTP_STATUS.BAD_REQUEST,
+    description: RESPONSE_MESSAGES.INVALID_CREDENTIALS,
+  })
+  async login(@Body(ValidationPipe) loginUserDto: LoginUserDto) {
     try {
-      logger.info(`Login attempt for email: ${loginUserDto.email}`);
+      logger.info(LOGGER_MESSAGES.LOGIN_ATTEMPT.replace('{email}', loginUserDto.email));
       const result = await this.userService.login(loginUserDto);
-      logger.info(`Login successful for email: ${loginUserDto.email}`);
+      logger.info(LOGGER_MESSAGES.LOGIN_SUCCESS.replace('{email}', loginUserDto.email));
       return result;
     } catch (error) {
-      logger.error(`Login failed for email: ${loginUserDto.email} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.LOGIN_ERROR.replace('{error}', error.message).replace('{email}', loginUserDto.email),
+      );
       throw error;
     }
   }
@@ -122,15 +139,15 @@ export class UserController {
     description: RESPONSE_MESSAGES.LOGIN_SUCCESS,
   })
   @ApiResponse({
-    status: HTTP_STATUS.NOT_FOUND,
-    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: 'Failed to initiate Google login',
   })
   async googleLogin() {
     try {
-      logger.info('Google login initiated');
+      logger.info(LOGGER_MESSAGES.GOOGLE_LOGIN_INITIATED);
     } catch (error) {
-      logger.error(`Google login initiation failed - ${error.message}`);
-      throw CustomException.internalServererror('Failed to initiate Google login');
+      logger.error(LOGGER_MESSAGES.GOOGLE_LOGIN_INIT_ERROR.replace('{error}', error.message));
+      throw CustomException.internalServererror(RESPONSE_MESSAGES.LOGIN_FAILED);
     }
   }
 
@@ -142,21 +159,24 @@ export class UserController {
     description: RESPONSE_MESSAGES.LOGIN_SUCCESS,
   })
   @ApiResponse({
-    status: HTTP_STATUS.NOT_FOUND,
-    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+    status: HTTP_STATUS.UNAUTHORIZED,
+    description: 'Google authentication failed',
   })
-  async googleLoginRedirect(@Req() req) {
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: 'Google login failed',
+  })
+  async googleLoginRedirect(@Request() req) {
     try {
       if (!req.user) {
         throw CustomException.unauthorized('Google authentication failed');
       }
-      
-      logger.info(`Google login redirect for user: ${req.user.email}`);
+      logger.info(LOGGER_MESSAGES.GOOGLE_LOGIN_REDIRECT.replace('{email}', req.user.email));
       const result = await this.userService.handleGoogleLogin(req.user);
-      logger.info(`Google login successful for user: ${req.user.email}`);
+      logger.info(LOGGER_MESSAGES.GOOGLE_LOGIN_SUCCESS.replace('{email}', req.user.email));
       return result;
     } catch (error) {
-      logger.error(`Google login redirect failed - ${error.message}`);
+      logger.error(LOGGER_MESSAGES.GOOGLE_LOGIN_REDIRECT_ERROR.replace('{error}', error.message));
       throw error;
     }
   }
@@ -168,18 +188,28 @@ export class UserController {
     status: HTTP_STATUS.OK,
     description: RESPONSE_MESSAGES.PASSWORD_RESET_OTP_SENT,
   })
-  async initiatePasswordReset(@Body() dto: PasswordResetInitDto) {
+  @ApiResponse({
+    status: HTTP_STATUS.BAD_REQUEST,
+    description: 'Email is required',
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.NOT_FOUND,
+    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.PASSWORD_RESET_FAILED,
+  })
+  async initiatePasswordReset(@Body(ValidationPipe) dto: PasswordResetInitDto) {
     try {
-      if (!dto.email) {
-        throw CustomException.badRequest('Email is required');
-      }
-      
-      logger.info(`Password reset initiation for email: ${dto.email}`);
+      logger.info(LOGGER_MESSAGES.PASSWORD_RESET_INITIATED.replace('{email}', dto.email));
       const result = await this.userService.initiatePasswordReset(dto.email);
-      logger.info(`Password reset OTP sent for email: ${dto.email}`);
+      logger.info(LOGGER_MESSAGES.PASSWORD_RESET_OTP_SENT.replace('{email}', dto.email));
       return result;
     } catch (error) {
-      logger.error(`Password reset initiation failed for email: ${dto.email} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.PASSWORD_RESET_INIT_ERROR.replace('{error}', error.message).replace('{email}', dto.email),
+      );
       throw error;
     }
   }
@@ -191,18 +221,28 @@ export class UserController {
     status: HTTP_STATUS.OK,
     description: RESPONSE_MESSAGES.OTP_VERIFIED_SUCCESS,
   })
-  async verifyPasswordResetOTP(@Body() dto: VerifyOtpDto) {
+  @ApiResponse({
+    status: HTTP_STATUS.BAD_REQUEST,
+    description: RESPONSE_MESSAGES.INVALID_OTP,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.NOT_FOUND,
+    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.OTP_VERIFICATION_FAILED,
+  })
+  async verifyPasswordResetOTP(@Body(ValidationPipe) dto: VerifyOtpDto) {
     try {
-      if (!dto.email || !dto.otp) {
-        throw CustomException.badRequest(RESPONSE_MESSAGES.EMAIL_OTP_REQUIRE);
-      }
-      
-      logger.info(`OTP verification attempt for email: ${dto.email}`);
+      logger.info(LOGGER_MESSAGES.OTP_VERIFICATION_ATTEMPT.replace('{email}', dto.email));
       const result = await this.userService.verifyPasswordResetOTP(dto.email, dto.otp);
-      logger.info(`OTP verification successful for email: ${dto.email}`);
+      logger.info(LOGGER_MESSAGES.OTP_VERIFICATION_SUCCESS.replace('{email}', dto.email));
       return result;
     } catch (error) {
-      logger.error(`OTP verification failed for email: ${dto.email} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.OTP_VERIFICATION_ERROR.replace('{error}', error.message).replace('{email}', dto.email),
+      );
       throw error;
     }
   }
@@ -214,18 +254,28 @@ export class UserController {
     status: HTTP_STATUS.OK,
     description: RESPONSE_MESSAGES.PASSWORD_RESET_SUCCESS,
   })
-  async resetPassword(@Body() dto: ResetPasswordDto) {
+  @ApiResponse({
+    status: HTTP_STATUS.BAD_REQUEST,
+    description: RESPONSE_MESSAGES.PASSWORD_RESET_TOKEN_REQUIRED,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.NOT_FOUND,
+    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.PASSWORD_RESET_FAILED,
+  })
+  async resetPassword(@Body(ValidationPipe) dto: ResetPasswordDto) {
     try {
-      if (!dto.email || !dto.newPassword || !dto.resetToken) {
-        throw CustomException.badRequest(RESPONSE_MESSAGES.PASSWORD_RESET_TOKEN_REQUIRED);
-      }
-      
-      logger.info(`Password reset attempt for email: ${dto.email}`);
+      logger.info(LOGGER_MESSAGES.PASSWORD_RESET_ATTEMPT.replace('{email}', dto.email));
       const result = await this.userService.resetPassword(dto.email, dto.newPassword, dto.resetToken);
-      logger.info(`Password reset successful for email: ${dto.email}`);
+      logger.info(LOGGER_MESSAGES.PASSWORD_RESET_SUCCESS.replace('{email}', dto.email));
       return result;
     } catch (error) {
-      logger.error(`Password reset failed for email: ${dto.email} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.PASSWORD_RESET_ERROR.replace('{error}', error.message).replace('{email}', dto.email),
+      );
       throw error;
     }
   }
@@ -240,34 +290,45 @@ export class UserController {
     description: RESPONSE_MESSAGES.PASSWORD_CHANGED_SUCCESS,
   })
   @ApiResponse({
+    status: HTTP_STATUS.BAD_REQUEST,
+    description: RESPONSE_MESSAGES.PASSWORD_TOO_SHORT,
+  })
+  @ApiResponse({
     status: HTTP_STATUS.UNAUTHORIZED,
     description: RESPONSE_MESSAGES.INVALID_CREDENTIALS,
   })
-  async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+  @ApiResponse({
+    status: HTTP_STATUS.NOT_FOUND,
+    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.PASSWORD_CHANGE_FAILED,
+  })
+  async changePassword(@Request() req, @Body(ValidationPipe) changePasswordDto: ChangePasswordDto) {
     try {
       if (!req.user?.userId) {
         throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
-      
-      if (!changePasswordDto.newPassword) {
-        throw CustomException.badRequest('New password is required');
-      }
-      
-      logger.info(`Password change attempt for user: ${req.user.userId}`);
-      const result = await this.userService.changePassword(req.user.userId, changePasswordDto.oldPassword,changePasswordDto.newPassword);
-      logger.info(`Password change successful for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.PASSWORD_CHANGE_ATTEMPT.replace('{userId}', req.user.userId));
+      const result = await this.userService.changePassword(
+        req.user.userId,
+        changePasswordDto.oldPassword,
+        changePasswordDto.newPassword,
+      );
+      logger.info(LOGGER_MESSAGES.PASSWORD_CHANGE_SUCCESS.replace('{userId}', req.user.userId));
       return result;
     } catch (error) {
-      logger.error(`Password change failed for user: ${req.user?.userId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.PASSWORD_CHANGE_ERROR.replace('{error}', error.message).replace('{userId}', req.user?.userId || 'unknown'),
+      );
       throw error;
     }
   }
 
-  // @UseGuards(AuthGuard)
   @Post('refresh-token')
   @HttpCode(HTTP_STATUS.OK)
-  // @ApiBearerAuth()
-  @ApiOperation({ summary: 'Refresh access token (authenticated)' })
+  @ApiOperation({ summary: 'Refresh access token' })
   @ApiResponse({
     status: HTTP_STATUS.OK,
     description: 'Token refreshed successfully',
@@ -276,13 +337,15 @@ export class UserController {
     status: HTTP_STATUS.UNAUTHORIZED,
     description: RESPONSE_MESSAGES.INVALID_RESET_TOKEN,
   })
-  async refreshToken(@Request() req, @Body() refreshTokenDto:RefreshTokenDto) {
+  async refreshToken(@Body(ValidationPipe) refreshTokenDto: RefreshTokenDto) {
     try {
       const result = await this.userService.refreshTokens(refreshTokenDto.refreshToken);
-      logger.info(`Token refresh successful for user: ${req.user?.userId}`);
+      logger.info(LOGGER_MESSAGES.TOKEN_REFRESH_SUCCESS.replace('{userId}', 'unknown')); 
       return result;
     } catch (error) {
-      logger.error(`Token refresh failed for user: ${req.user?.userId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.TOKEN_REFRESH_ERROR.replace('{error}', error.message).replace('{userId}', 'unknown'),
+      );
       throw error;
     }
   }
@@ -295,18 +358,31 @@ export class UserController {
     status: HTTP_STATUS.CREATED,
     description: RESPONSE_MESSAGES.ADDRESS_ADDED_SUCCESS,
   })
-  async addAddress(@Request() req, @Body() createAddressDto: CreateAddressDto) {
+  @ApiResponse({
+    status: HTTP_STATUS.UNAUTHORIZED,
+    description: RESPONSE_MESSAGES.authentication_required,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.NOT_FOUND,
+    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.ADDRESS_CREATION_FAILED,
+  })
+  async addAddress(@Request() req, @Body(ValidationPipe) createAddressDto: CreateAddressDto) {
     try {
       if (!req.user?.userId) {
         throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
-      
-      logger.info(`Add address attempt for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.ADD_ADDRESS_ATTEMPT.replace('{userId}', req.user.userId));
       const result = await this.userService.addAddress(req.user.userId, createAddressDto);
-      logger.info(`Add address successful for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.ADD_ADDRESS_SUCCESS.replace('{userId}', req.user.userId));
       return result;
     } catch (error) {
-      logger.error(`Add address failed for user: ${req.user?.userId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.ADD_ADDRESS_ERROR.replace('{error}', error.message).replace('{userId}', req.user?.userId || 'unknown'),
+      );
       throw error;
     }
   }
@@ -319,18 +395,31 @@ export class UserController {
     status: HTTP_STATUS.OK,
     description: RESPONSE_MESSAGES.ADDRESSES_RETRIEVED_SUCCESS,
   })
+  @ApiResponse({
+    status: HTTP_STATUS.UNAUTHORIZED,
+    description: RESPONSE_MESSAGES.authentication_required,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.NOT_FOUND,
+    description: RESPONSE_MESSAGES.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.ADDRESSES_RETRIEVAL_FAILED,
+  })
   async getUserAddresses(@Request() req) {
     try {
       if (!req.user?.userId) {
         throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
-      
-      logger.info(`Get addresses attempt for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.GET_ADDRESS_ATTEMPT.replace('{userId}', req.user.userId));
       const result = await this.userService.getUserAddresses(req.user.userId);
-      logger.info(`Get addresses successful for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.GET_ADDRESS_SUCCESS.replace('{userId}', req.user.userId));
       return result;
     } catch (error) {
-      logger.error(`Get addresses failed for user: ${req.user?.userId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.GET_ADDRESS_ERROR.replace('{error}', error.message).replace('{userId}', req.user?.userId || 'unknown'),
+      );
       throw error;
     }
   }
@@ -345,29 +434,47 @@ export class UserController {
     description: RESPONSE_MESSAGES.ADDRESS_UPDATED_SUCCESS,
   })
   @ApiResponse({
+    status: HTTP_STATUS.BAD_REQUEST,
+    description: 'Address ID is required',
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.UNAUTHORIZED,
+    description: RESPONSE_MESSAGES.authentication_required,
+  })
+  @ApiResponse({
     status: HTTP_STATUS.NOT_FOUND,
     description: RESPONSE_MESSAGES.ADDRESS_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.ADDRESSES_RETRIEVAL_FAILED,
   })
   async updateAddress(
     @Request() req,
     @Param('addressId') addressId: string,
-    @Body() updateAddressDto: UpdateAddressDto,
+    @Body(ValidationPipe) updateAddressDto: UpdateAddressDto,
   ) {
     try {
       if (!req.user?.userId) {
         throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
-      
       if (!addressId) {
         throw CustomException.badRequest('Address ID is required');
       }
-      
-      logger.info(`Update address attempt for user: ${req.user.userId}, address: ${addressId}`);
+      logger.info(
+        LOGGER_MESSAGES.UPDATE_ADDRESS_ATTEMPT.replace('{userId}', req.user.userId).replace('{addressId}', addressId),
+      );
       const result = await this.userService.updateAddress(req.user.userId, addressId, updateAddressDto);
-      logger.info(`Update address successful for user: ${req.user.userId}, address: ${addressId}`);
+      logger.info(
+        LOGGER_MESSAGES.UPDATE_ADDRESS_SUCCESS.replace('{userId}', req.user.userId).replace('{addressId}', addressId),
+      );
       return result;
     } catch (error) {
-      logger.error(`Update address failed for user: ${req.user?.userId}, address: ${addressId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.UPDATE_ADDRESS_ERROR.replace('{error}', error.message)
+          .replace('{userId}', req.user?.userId || 'unknown')
+          .replace('{addressId}', addressId),
+      );
       throw error;
     }
   }
@@ -382,25 +489,43 @@ export class UserController {
     description: RESPONSE_MESSAGES.ADDRESS_DELETED_SUCCESS,
   })
   @ApiResponse({
+    status: HTTP_STATUS.BAD_REQUEST,
+    description: 'Address ID is required',
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.UNAUTHORIZED,
+    description: RESPONSE_MESSAGES.authentication_required,
+  })
+  @ApiResponse({
     status: HTTP_STATUS.NOT_FOUND,
     description: RESPONSE_MESSAGES.ADDRESS_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.ADDRESS_DELETED_FAILED,
   })
   async deleteAddress(@Request() req, @Param('addressId') addressId: string) {
     try {
       if (!req.user?.userId) {
         throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
-      
       if (!addressId) {
         throw CustomException.badRequest('Address ID is required');
       }
-      
-      logger.info(`Delete address attempt for user: ${req.user.userId}, address: ${addressId}`);
+      logger.info(
+        LOGGER_MESSAGES.DELETE_ADDRESS_ATTEMPT.replace('{userId}', req.user.userId).replace('{addressId}', addressId),
+      );
       const result = await this.userService.deleteAddress(req.user.userId, addressId);
-      logger.info(`Delete address successful for user: ${req.user.userId}, address: ${addressId}`);
+      logger.info(
+        LOGGER_MESSAGES.DELETE_ADDRESS_SUCCESS.replace('{userId}', req.user.userId).replace('{addressId}', addressId),
+      );
       return result;
     } catch (error) {
-      logger.error(`Delete address failed for user: ${req.user?.userId}, address: ${addressId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.DELETE_ADDRESS_ERROR.replace('{error}', error.message)
+          .replace('{userId}', req.user?.userId || 'unknown')
+          .replace('{addressId}', addressId),
+      );
       throw error;
     }
   }
@@ -414,6 +539,10 @@ export class UserController {
     description: RESPONSE_MESSAGES.PROFILE_RETRIEVED_SUCCESS,
   })
   @ApiResponse({
+    status: HTTP_STATUS.UNAUTHORIZED,
+    description: RESPONSE_MESSAGES.authentication_required,
+  })
+  @ApiResponse({
     status: HTTP_STATUS.NOT_FOUND,
     description: RESPONSE_MESSAGES.USER_NOT_FOUND,
   })
@@ -422,13 +551,14 @@ export class UserController {
       if (!req.user?.userId) {
         throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
-      
-      logger.info(`Get profile attempt for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.GET_PROFILE_ATTEMPT.replace('{userId}', req.user.userId));
       const result = await this.userService.getProfile(req.user.userId);
-      logger.info(`Get profile successful for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.GET_PROFILE_SUCCESS.replace('{userId}', req.user.userId));
       return result;
     } catch (error) {
-      logger.error(`Get profile failed for user: ${req.user?.userId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.GET_PROFILE_ERROR.replace('{error}', error.message).replace('{userId}', req.user?.userId || 'unknown'),
+      );
       throw error;
     }
   }
@@ -443,26 +573,32 @@ export class UserController {
     description: RESPONSE_MESSAGES.PROFILE_UPDATED_SUCCESS,
   })
   @ApiResponse({
+    status: HTTP_STATUS.UNAUTHORIZED,
+    description: RESPONSE_MESSAGES.authentication_required,
+  })
+  @ApiResponse({
     status: HTTP_STATUS.NOT_FOUND,
     description: RESPONSE_MESSAGES.USER_NOT_FOUND,
   })
-  async editProfile(@Request() req, @Body() updateUserDto: UpdateProfileDto) {
+  async editProfile(@Request() req, @Body(ValidationPipe) updateUserDto: UpdateProfileDto) {
     try {
       if (!req.user?.userId) {
         throw CustomException.unauthorized(RESPONSE_MESSAGES.authentication_required);
       }
-      logger.info(`Edit profile attempt for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.EDIT_PROFILE_ATTEMPT.replace('{userId}', req.user.userId));
       const result = await this.userService.editProfile(req.user.userId, updateUserDto);
-      logger.info(`Edit profile successful for user: ${req.user.userId}`);
+      logger.info(LOGGER_MESSAGES.EDIT_PROFILE_SUCCESS.replace('{userId}', req.user.userId));
       return result;
     } catch (error) {
-      logger.error(`Edit profile failed for user: ${req.user?.userId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.EDIT_PROFILE_ERROR.replace('{error}', error.message).replace('{userId}', req.user?.userId || 'unknown'),
+      );
       throw error;
     }
   }
 
   @UseGuards(AuthGuard)
-  @Post('logout')
+  @Delete('logout')
   @HttpCode(HTTP_STATUS.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'User logout (authenticated)' })
@@ -470,21 +606,29 @@ export class UserController {
     status: HTTP_STATUS.OK,
     description: RESPONSE_MESSAGES.LOGOUT_SUCCESS,
   })
+  @ApiResponse({
+    status: HTTP_STATUS.UNAUTHORIZED,
+    description: RESPONSE_MESSAGES.ACCESS_TOKEN_REQUIRED,
+  })
+  @ApiResponse({
+    status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    description: RESPONSE_MESSAGES.LOGOUT_FAILED,
+  })
   async logout(@Request() req) {
     try {
       const authHeader = req.headers.authorization;
       const accessToken = authHeader?.replace('Bearer ', '');
-      
       if (!accessToken) {
         throw CustomException.unauthorized(RESPONSE_MESSAGES.ACCESS_TOKEN_REQUIRED);
       }
-      
-      logger.info(`Logout attempt for user: ${req.user?.userId}`);
+      logger.info(LOGGER_MESSAGES.LOGOUT_ATTEMPT.replace('{userId}', req.user?.userId || 'unknown'));
       const result = await this.userService.logout(accessToken);
-      logger.info(`Logout successful for user: ${req.user?.userId}`);
+      logger.info(LOGGER_MESSAGES.LOGOUT_SUCCESS.replace('{userId}', req.user?.userId || 'unknown'));
       return result;
     } catch (error) {
-      logger.error(`Logout failed for user: ${req.user?.userId} - ${error.message}`);
+      logger.error(
+        LOGGER_MESSAGES.LOGOUT_ERROR.replace('{error}', error.message).replace('{userId}', req.user?.userId || 'unknown'),
+      );
       throw error;
     }
   }

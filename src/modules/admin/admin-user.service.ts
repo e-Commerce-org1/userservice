@@ -18,7 +18,6 @@ import {
 import { mapUserToUserData } from '../../transformer/user.transformer';
 import { RESPONSE_MESSAGES } from '../../common/constants/user-messages';
 import { logger } from '../../common/logger';
-import { CustomException } from '../../common/exceptions/user.exceptions';
 
 @Injectable()
 export class UserAdminService {
@@ -143,43 +142,8 @@ export class UserAdminService {
     }
   }
 
-    // ✅ Full Text Search API
-  // async searchUsers(request: SearchUsersRequest): Promise<SearchUsersResponse> {
-  //   try {
-  //     const searchConditions = {
-
-  //       $or: [
-  //         { name: { $regex: request.query, $options: 'i' } },
-  //         { email: { $regex: request.query, $options: 'i' } },
-  //         { phoneNumber: { $regex: request.query, $options: 'i' } },
-  //       ],
-  //     };
-
-  //     const users = await this.userAdminDao.searchUsers(searchConditions, request.limit);
-  //     return {
-  //       users: users.map(mapUserToUserData),
-  //       success: true,
-  //       message: RESPONSE_MESSAGES.USER_FETCHED,
-  //     };
-  //   } catch (error) {
-  //     logger.error(`Error during user search: ${error.message}`);
-  //     return {
-  //       users: [],
-  //       success: false,
-  //       message: RESPONSE_MESSAGES.ERROR_FETCHING_USERS,
-  //     };
-  //   }
-  // }
-
   async searchUsers(request: SearchUsersRequest): Promise<SearchUsersResponse> {
     try {
-      // Validate page and limit
-      // const limit = Math.max(1, Math.min(request.limit, 100)); // Limit between 1 and 100
-      // const page = Math.max(1, request.page); // Page at least 1
-    //       const page = Number(request.page) || 1;
-    // const limit = Number(request.limit) || 10;
-     // const skip = (page - 1) * limit; // Calculate skip for pagination
-
       const searchConditions = {
         $or: [
           { name: { $regex: request.query, $options: 'i' } },
@@ -222,7 +186,6 @@ export class UserAdminService {
     }
   }
 
-  // ✅ Fetch all users without pagination
   async getAllUsersWithoutPagination(): Promise<GetAllUsersWithoutPaginationResponse> {
     try {
       const users = await this.userAdminDao.findAllWithoutPagination();
