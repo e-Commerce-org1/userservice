@@ -6,12 +6,8 @@ import { User, UserSchema } from 'src/schema/user.schema';
 import { UserAdminDao } from './dao/admin.dao';
 
 @Module({
-    imports:[
-        MongooseModule.forFeature([
-          { name: User.name, schema: UserSchema },
-        ]),
-    ],
-    controllers:[UserAdminController],
-    providers:[UserAdminService,UserAdminDao],
+  imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])],
+  controllers: [UserAdminController],
+  providers: [UserAdminService, UserAdminDao],
 })
-export class UserAdminModule{};
+export class UserAdminModule {}

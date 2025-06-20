@@ -1,4 +1,3 @@
-// src/common/constants/response-messages.constants.ts
 export const RESPONSE_MESSAGES = {
   // User Authentication Messages
   USER_REGISTERED_SUCCESS:
@@ -6,7 +5,7 @@ export const RESPONSE_MESSAGES = {
   EMAIL_VERIFIED_SUCCESS: 'Email verified successfully',
   VERIFICATION_EMAIL_SENT: 'Verification email sent successfully',
   LOGIN_SUCCESS: 'User logged in successfully',
-  LOGIN_FAILED:'User logged in failed',
+  LOGIN_FAILED: 'User logged in failed',
   LOGOUT_SUCCESS: 'User logged out successfully',
   PASSWORD_CHANGED_SUCCESS: 'Password changed successfully',
   PASSWORD_RESET_OTP_SENT: 'Password reset OTP sent to your email',
@@ -17,7 +16,6 @@ export const RESPONSE_MESSAGES = {
   PROFILE_RETRIEVED_SUCCESS: 'User profile retrieved successfully',
   PROFILE_RETRIEVED_FAILED: 'User profile retrieved failed',
 
-
   // Address Messages
   ADDRESS_ADDED_SUCCESS: 'Address added successfully',
   ADDRESS_UPDATED_SUCCESS: 'Address updated successfully',
@@ -26,16 +24,16 @@ export const RESPONSE_MESSAGES = {
   ADDRESSES_RETRIEVAL_FAILED: 'Failed to retrieve addresses',
 
   //admin messages
-  USER_FETCHED : 'Users fetched successfully',
-  INDIVIDUAL_USER_FETCHED:'User fetched successfully',
-  STATUS_UPDATED:'User status updated',
-  DELETE_USER:'User deleted successfully',
+  USER_FETCHED: 'Users fetched successfully',
+  INDIVIDUAL_USER_FETCHED: 'User fetched successfully',
+  STATUS_UPDATED: 'User status updated',
+  DELETE_USER: 'User deleted successfully',
   // Error Messages
   EMAIL_ALREADY_EXISTS: 'Email already exists',
   USER_NOT_FOUND: 'User not found',
   INVALID_CREDENTIALS: 'Invalid credentials',
   EMAIL_NOT_VERIFIED: 'Email not verified',
-  USER_BLOCKED:'User is blocked by admin',
+  USER_BLOCKED: 'User is blocked by admin',
   INVALID_VERIFICATION_TOKEN: 'Invalid verification token',
   USER_ALREADY_VERIFIED: 'User is already verified',
   INVALID_OTP: 'Invalid OTP',
@@ -50,17 +48,17 @@ export const RESPONSE_MESSAGES = {
   OTP_VERIFICATION_FAILED: 'OTP verification failed',
   ADDRESS_CREATION_FAILED: 'Address creation failed',
   PASSWORD_TOO_SHORT: 'Password must be at least 8 characters long',
-  ADDRESS_DELETED_FAILED:'address delete failed',
-  DATA_REQIRED:'User ID and token are required',
-  FILL_EMAIL : 'email is required',
+  ADDRESS_DELETED_FAILED: 'address delete failed',
+  DATA_REQIRED: 'User ID and token are required',
+  FILL_EMAIL: 'email is required',
   ERROR_FETCHING_USERS: 'Error fetching users',
   ERROR_FETCHING_USER: 'Error fetching user',
   ERROR_UPDATING_STATUS: 'Error updating user status',
-  EMAIL_OTP_REQUIRE:'Email and OTP are required',
+  EMAIL_OTP_REQUIRE: 'Email and OTP are required',
   PASSWORD_RESET_TOKEN_REQUIRED: 'Email, new password, and reset token are required',
   authentication_required: 'User authentication required',
-  REFRESH_TOKEN_REQUIRE:'Refresh token is required',
-  ACCESS_TOKEN_REQUIRED:'Access token is required',
+  REFRESH_TOKEN_REQUIRE: 'Refresh token is required',
+  ACCESS_TOKEN_REQUIRED: 'Access token is required',
   INCORRECT_OLD_PASSWORD: 'Incorrect old password',
   PASSWORD_SAME_AS_OLD: 'New password cannot be the same as the old password',
   PASSWORD_SAME_AS_CURRENT: 'New password cannot be the same as the current password',
@@ -69,6 +67,11 @@ export const RESPONSE_MESSAGES = {
   USER_NOT_BLOCKED: 'User is not blocked',
   USER_UNBLOCKED_SUCCESSFULLY: 'User unblocked successfully',
   ERROR_UNBLOCKING_USER: 'Error unblocking user',
-  // USER_FETCHED: 'User fetched successfully',
-};
+  AUTHORIZATION_HEADER_MISSING: 'Authorization header is missing or malformed',
+  AUTHORIZATION_HEADER_INVALID: 'Authorization header is invalid',
 
+  INTERNAL_SERVER_ERROR: 'Internal server error, please try again later',
+  TOO_MANY_OTP_ATTEMPTS: 'Too many OTP attempts, please try again later',
+  ADDRESS_ID: 'Address ID is required',
+  TOKEN_REFRESHED: 'Token refreshed successfully',
+};

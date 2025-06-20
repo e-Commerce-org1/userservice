@@ -1,5 +1,4 @@
-export const verificationEmailSubject = (appName: string) => 
-  `Verify Your Email for ${appName}`;
+export const verificationEmailSubject = (appName: string) => `Verify Your Email for ${appName}`;
 
 export const verificationEmailTemplate = (appName: string, token: string) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

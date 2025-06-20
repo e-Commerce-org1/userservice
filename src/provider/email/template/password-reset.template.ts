@@ -1,5 +1,4 @@
-export const passwordResetSubject = (appName: string) => 
-  `Password Reset OTP for ${appName}`;
+export const passwordResetSubject = (appName: string) => `Password Reset OTP for ${appName}`;
 
 export const passwordResetTemplate = (appName: string, otp: string) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

@@ -1,11 +1,11 @@
 import { Observable } from 'rxjs';
 
 export interface AuthServiceGrpc {
-  getToken(data: { email: string; deviceId: string; role: string; entityId: string }): Observable<{
+  getToken(data: { email: string; deviceId: string; entityId: string }): Observable<{
     accessToken: string;
     refreshToken: string;
   }>;
-  accessToken(data: {  refreshToken: string }): Observable<{
+  accessToken(data: { refreshToken: string }): Observable<{
     accessToken: string;
   }>;
   logout(data: { accessToken: string }): Observable<{ success: boolean }>;

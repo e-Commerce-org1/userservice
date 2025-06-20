@@ -11,10 +11,6 @@ service UserAdminGrpcService {
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
   rpc GetUsersByStatus(GetUsersByStatusRequest) returns (GetUsersByStatusResponse);
   rpc GetAllUsersWithoutPagination(GetAllUsersWithoutPaginationRequest) returns (GetAllUsersWithoutPaginationResponse);
-  rpc AddAddress (AddAddressRequest) returns (AddAddressResponse); 
-  rpc GetUserAddresses (GetUserAddressesRequest) returns (GetUserAddressesResponse);
-  rpc UpdateAddress (UpdateAddressRequest) returns (UpdateAddressResponse);
-  rpc DeleteAddress (DeleteAddressRequest) returns (DeleteAddressResponse); 
 }
 
 message GetAllUsersRequest {
@@ -102,52 +98,4 @@ message UserData {
   string phone = 4;
   string status = 5;
   string role = 6;
-}
-
-message AddAddressRequest {
-  string userId = 1;
-  Address address = 2;
-}
-
-message Address {
-  string street = 1;
-  string city = 2;
-  string state = 3; 
-  string postalCode = 4; 
-  string country = 5; 
-  optional bool isDefault=6;
-  optional string addressType=7;
-}
-
-message AddAddressResponse { 
-  string addressId = 1; 
-  string message = 2; 
-}
-
-message GetUserAddressesRequest { 
-  string userId = 1; 
-}
-
-message GetUserAddressesResponse {
-  repeated Address addresses = 1; 
-}
-
-message UpdateAddressRequest {
-  string userId = 1; 
-  string addressId = 2; 
-  Address address = 3; 
-}
-
-message UpdateAddressResponse {
-  string addressId = 1; 
-  string message = 2; 
-}
-
-message DeleteAddressRequest {
-  string userId = 1; 
-  string addressId = 2; 
-}
-
-message DeleteAddressResponse {
-  string message = 1; 
 }

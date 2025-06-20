@@ -3,28 +3,27 @@ export const packageName = 'useradmin';
 export const grpcService = 'UserAdminGrpcService';
 
 export const grpcMethods = {
-    getAll: 'GetAllUsers',
+  getAll: 'GetAllUsers',
 
-    getbyId: 'GetUserById',
+  getbyId: 'GetUserById',
 
-    update: 'UpdateUserStatus',
+  update: 'UpdateUserStatus',
 
-    delete: 'DeleteUser',
+  delete: 'DeleteUser',
 
-    unblock: 'UnblockUser',
+  unblock: 'UnblockUser',
 
-    search: 'SearchUsers',
+  search: 'SearchUsers',
 
-    getByStatus: 'GetUsersByStatus',
+  getByStatus: 'GetUsersByStatus',
 
-    getAllWithoutPagination: 'GetAllUsersWithoutPagination',
+  getAllWithoutPagination: 'GetAllUsersWithoutPagination',
 
-    AddAddress: 'AddAddress',
+  AddAddress: 'AddAddress',
 
-    GetUserAddresses: 'GetUserAddresses',
+  GetUserAddresses: 'GetUserAddresses',
 
-    UpdateAddress: 'UpdateAddress', 
-    
-    deleteAddress: 'DeleteAddress',
+  UpdateAddress: 'UpdateAddress',
 
-}
+  deleteAddress: 'DeleteAddress',
+};

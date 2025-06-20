@@ -152,7 +152,7 @@ export class UserAdminService {
         ],
       };
 
-      const users = await this.userAdminDao.searchUsers(searchConditions,);
+      const users = await this.userAdminDao.searchUsers(searchConditions);
       return {
         users: users.map(mapUserToUserData),
         success: true,
@@ -166,9 +166,9 @@ export class UserAdminService {
         message: RESPONSE_MESSAGES.ERROR_FETCHING_USERS,
       };
     }
-}
+  }
 
-   async getUsersByStatus(request: GetUsersByStatusRequest): Promise<GetUsersByStatusResponse> {
+  async getUsersByStatus(request: GetUsersByStatusRequest): Promise<GetUsersByStatusResponse> {
     try {
       const users = await this.userAdminDao.findByStatus(request.status);
       return {

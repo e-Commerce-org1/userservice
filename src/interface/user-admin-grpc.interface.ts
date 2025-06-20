@@ -24,7 +24,7 @@ export interface GetUserByIdResponse {
 }
 
 export interface UpdateUserStatusRequest {
-  userId: string
+  userId: string;
 }
 
 export interface UpdateUserStatusResponse {

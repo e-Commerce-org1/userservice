@@ -15,7 +15,7 @@ import { User, UserSchema } from 'src/schema/user.schema';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal:true,
+      isGlobal: true,
     }),
     ClientsModule.registerAsync([
       {
@@ -33,13 +33,11 @@ import { User, UserSchema } from 'src/schema/user.schema';
       },
     ]),
 
-    MongooseModule.forFeature([
-          { name: User.name, schema: UserSchema },
-        ]),
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     EmailModule,
     RedisModule,
   ],
   controllers: [UserController],
-  providers: [UserService,UserDao, AuthGuard,GoogleStrategy],
+  providers: [UserService, UserDao, AuthGuard, GoogleStrategy],
 })
 export class UserModule {}

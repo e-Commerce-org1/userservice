@@ -7,19 +7,18 @@ const logDir = 'logs';
 const nestLevels = {
   error: 0,
   warn: 1,
-  info: 2, 
+  info: 2,
   log: 3,
   verbose: 4,
   debug: 5,
 };
 export const logger = winston.createLogger({
   levels: nestLevels,
-  level: 'log', 
+  level: 'log',
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.printf(
-      (info) =>
-        `${info.timestamp} [${info.level.toUpperCase()}] ${info.message}`,
+      (info) => `${info.timestamp} [${info.level.toUpperCase()}] ${info.message}`,
     ),
   ),
   transports: [

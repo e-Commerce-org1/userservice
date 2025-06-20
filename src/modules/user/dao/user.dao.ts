@@ -4,13 +4,11 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from '../../../schema/user.schema';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { CreateAddressDto } from '../dto/create-address.dto';
-import { UpdateAddressDto } from '../dto/update-address.dto'
+import { UpdateAddressDto } from '../dto/update-address.dto';
 
 @Injectable()
 export class UserDao {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-  ) {}
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async findUserByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ email });
@@ -24,7 +22,9 @@ export class UserDao {
     return this.userModel.findById(userId).select('-password');
   }
 
-  async createUser(userData: CreateUserDto & { password: string; isVerified: boolean }): Promise<UserDocument> {
+  async createUser(
+    userData: CreateUserDto & { password: string; isVerified: boolean },
+  ): Promise<UserDocument> {
     const createdUser = new this.userModel(userData);
     return createdUser.save();
   }
@@ -39,36 +39,23 @@ export class UserDao {
     return user.save();
   }
 
-  async updateUserVerificationStatus(userId: string, isVerified: boolean): Promise<UserDocument | null> {
-    return this.userModel.findByIdAndUpdate(
-      userId,
-      { isVerified },
-      { new: true }
-    );
+  async updateUserVerificationStatus(
+    userId: string,
+    isVerified: boolean,
+  ): Promise<UserDocument | null> {
+    return this.userModel.findByIdAndUpdate(userId, { isVerified }, { new: true });
   }
 
   async updateUserActiveStatus(userId: string, isActive: string): Promise<UserDocument | null> {
-    return this.userModel.findByIdAndUpdate(
-      userId,
-      { isActive },
-      { new: true }
-    );
+    return this.userModel.findByIdAndUpdate(userId, { isActive }, { new: true });
   }
 
   async updateUserDeviceId(userId: string, deviceId: string): Promise<UserDocument | null> {
-    return this.userModel.findByIdAndUpdate(
-      userId,
-      { deviceId },
-      { new: true }
-    );
+    return this.userModel.findByIdAndUpdate(userId, { deviceId }, { new: true });
   }
 
   async updateUserPassword(userId: string, hashedPassword: string): Promise<UserDocument | null> {
-    return this.userModel.findByIdAndUpdate(
-      userId,
-      { password: hashedPassword },
-      { new: true }
-    );
+    return this.userModel.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true });
   }
 
   async addUserAddress(user: UserDocument, addressData: CreateAddressDto): Promise<UserDocument> {
@@ -82,7 +69,7 @@ export class UserDao {
   async updateUserAddress(
     user: UserDocument,
     addressIndex: number,
-    updateData: UpdateAddressDto
+    updateData: UpdateAddressDto,
   ): Promise<UserDocument> {
     if (updateData.isDefault) {
       user.addresses.forEach((addr) => (addr.isDefault = false));
@@ -100,17 +87,15 @@ export class UserDao {
     return user.addresses.findIndex((addr) => addr._id?.toString() === addressId);
   }
 
-async findByIdAndUpdateWithoutPassword(
-  userId: string,
-  updateData: Partial<User>,
-): Promise<UserDocument | null> {
-  const user = await this.userModel
-    .findByIdAndUpdate(userId, { $set: updateData }, { new: true })
-    .select('-password')
-    .exec();
+  async findByIdAndUpdateWithoutPassword(
+    userId: string,
+    updateData: Partial<User>,
+  ): Promise<UserDocument | null> {
+    const user = await this.userModel
+      .findByIdAndUpdate(userId, { $set: updateData }, { new: true })
+      .select('-password')
+      .exec();
 
-  return user as UserDocument | null;
-}
-
-
+    return user as UserDocument | null;
+  }
 }
